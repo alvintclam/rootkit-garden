@@ -52,9 +52,19 @@ import {
   PLANT_GRID,
   PLAYER_RADIUS,
   CALL_EXPLOIT,
+  CALL_INJECT,
   CALL_LINK,
   CALL_PENTA,
   CALL_TRIPLE,
+  INJECT_CD,
+  INJECT_COST,
+  INJECT_DMG,
+  INJECT_SHOTS,
+  INJECT_SPEED,
+  INJECT_SPREAD,
+  PF_INJECT,
+  WAVE_BEAT_LEN,
+  WaveBeat,
   SCAN_CD,
   SCAN_HALF_ANGLE,
   SCAN_MARK,
@@ -99,8 +109,8 @@ import {
   releaseProj,
 } from './pools'
 
-const WAVE_PERIOD = 60 * 15
-const STORY_STEPS = 4
+const WAVE_PERIOD = WAVE_BEAT_LEN
+const STORY_STEPS = 5
 const EGG_SEED_TITLE = 1
 const EGG_KONAMI = 2
 const EGG_PRUNE_RITUAL = 4
@@ -623,6 +633,40 @@ function spawnBoss(world: World): void {
   world.events |= SimEvent.LevelUp
 }
 
+function tryInject(world: World): void {
+  let spent = 0
+  if (world.exploitStacks >= INJECT_COST) {
+    world.exploitStacks -= INJECT_COST
+    if (world.exploitStacks < 0) world.exploitStacks = 0
+    spent = 1
+  } else if (world.injectCd <= 0) {
+    world.injectCd = INJECT_CD
+    spent = 1
+  }
+  if (!spent) return
+  let ax = world.aimX
+  let ay = world.aimY
+  const al = Math.sqrt(ax * ax + ay * ay) || 1
+  ax /= al
+  ay /= al
+  const base = Math.atan2(ay, ax)
+  let dmgMul = world.upgrades.damageMul
+  if (world.eggFlags & EGG_KONAMI) dmgMul *= 1.08
+  const dmg = INJECT_DMG * dmgMul
+  for (let i = 0; i < INJECT_SHOTS; i++) {
+    const t = i - (INJECT_SHOTS - 1) * 0.5
+    const ang = base + t * INJECT_SPREAD
+    fireDirected(world, world.playerX, world.playerY, ang, dmg, INJECT_SPEED, 0, PF_INJECT)
+  }
+  world.events |= SimEvent.Inject
+  world.hitstop = 6
+  bumpShake(world, 8, 4)
+  world.flashLeft = Math.max(world.flashLeft, 5)
+  world.zoomPunch = Math.max(world.zoomPunch, 8)
+  spawnParts(world, world.playerX, world.playerY, 10, PART_SPARK, 2, 5, 12, 22)
+  setCallout(world, CALL_INJECT, 32)
+}
+
 function tryPlant(world: World): void {
   if (countAliveFlowers(world) >= world.upgrades.maxFlowers) return
   const gx = Math.round(world.playerX / PLANT_GRID) * PLANT_GRID
@@ -808,6 +852,14 @@ function tickPlayer(world: World, bits: number): void {
   if (bits & CmdBit.Cycle) world.plantKind = cyclePlantKind(world.upgrades, world.plantKind)
   if (bits & CmdBit.Plant) tryPlant(world)
   if (bits & CmdBit.Prune) tryPrune(world)
+  // Aim from movement (last facing)
+  if (mx !== 0 || my !== 0) {
+    const len2 = Math.sqrt(mx * mx + my * my) || 1
+    world.aimX = mx / len2
+    world.aimY = my / len2
+  }
+  if (rising(bits, world.prevBits, CmdBit.Inject)) tryInject(world)
+  if (world.injectCd > 0) world.injectCd--
 }
 
 function applyAuraSlow(world: World, fx: number, fy: number, range: number, dmg: number): void {
@@ -1277,16 +1329,61 @@ function tickJuiceFx(world: World): void {
   }
 }
 
+function updateWaveBeat(world: World): void {
+  world.wave = Math.floor(world.tick / WAVE_PERIOD) + 1
+  const local = world.tick % WAVE_PERIOD
+  const pct = local / WAVE_PERIOD
+  let beat: number = WaveBeat.Calm
+  if (pct < 0.28) beat = WaveBeat.Calm
+  else if (pct < 0.52) beat = WaveBeat.Surge
+  else if (pct < 0.64) beat = WaveBeat.Layout
+  else beat = WaveBeat.Escalate
+  // Boss telegraph near spawn
+  if (world.bossTeleLeft > 0 || (world.bossSpawned && world.bossSlot >= 0)) {
+    // keep escalate feel under boss pressure
+    if (beat === WaveBeat.Calm) beat = WaveBeat.Escalate
+  }
+  if (beat !== world.waveBeat) {
+    world.prevWaveBeat = world.waveBeat
+    world.waveBeat = beat
+    world.events |= SimEvent.WaveBeat
+    if (beat === WaveBeat.Layout) {
+      world.layoutLeft = 120
+      world.spawnTimer = 120
+      bumpShake(world, 4, 1.5)
+    } else if (beat === WaveBeat.Surge) {
+      bumpShake(world, 5, 2)
+    }
+  }
+  if (world.layoutLeft > 0) world.layoutLeft--
+}
+
 function tickSpawns(world: World): void {
+  updateWaveBeat(world)
+  if (world.waveBeat === WaveBeat.Layout || world.layoutLeft > 0) {
+    // layout window: no new spawns
+    return
+  }
   world.spawnTimer--
   if (world.spawnTimer > 0) return
   const diff = difficultyDef(world.difficulty)
-  world.wave = Math.floor(world.tick / WAVE_PERIOD) + 1
-  const rawBatch = 1 + Math.min(5, Math.floor(world.wave / 2))
+  const beat = world.waveBeat
+  let rawBatch = 1 + Math.min(5, Math.floor(world.wave / 2))
+  let intervalMul = diff.spawnIntervalMul
+  if (beat === WaveBeat.Calm) {
+    rawBatch = Math.max(1, Math.floor(rawBatch * 0.55))
+    intervalMul *= 1.35
+  } else if (beat === WaveBeat.Surge) {
+    rawBatch = Math.max(2, Math.floor(rawBatch * 1.55))
+    intervalMul *= 0.55
+  } else if (beat === WaveBeat.Escalate) {
+    rawBatch = Math.max(2, Math.floor(rawBatch * 1.25))
+    intervalMul *= 0.75
+  }
   const batch = Math.max(1, Math.floor(rawBatch * diff.batchMul + 0.0001))
   for (let i = 0; i < batch; i++) spawnEnemy(world)
-  const base = Math.max(26, 90 - world.wave * 4)
-  world.spawnTimer = Math.floor((base + nextInt(world.rng, 0, 18)) * diff.spawnIntervalMul)
+  const base = Math.max(22, 88 - world.wave * 4)
+  world.spawnTimer = Math.floor((base + nextInt(world.rng, 0, 16)) * intervalMul)
 }
 
 function tickComboTimers(world: World): void {

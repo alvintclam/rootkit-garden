@@ -37,6 +37,7 @@ export type StringKey =
   | 'touch.plant'
   | 'touch.prune'
   | 'touch.dash'
+  | 'touch.inject'
   | 'touch.cycle'
   | 'touch.pause'
   | 'touch.move'
@@ -94,20 +95,28 @@ export type StringKey =
   | 'up.16.t'
   | 'up.16.b'
   | 'story.4'
+  | 'story.5'
   | 'hud.exploit'
   | 'hud.heat'
   | 'tip.synergy'
+  | 'tip.inject'
+  | 'wave.calm'
+  | 'wave.surge'
+  | 'wave.layout'
+  | 'wave.escalate'
+  | 'hud.layout'
   | 'call.triple'
   | 'call.penta'
   | 'call.link'
   | 'call.exploit'
+  | 'call.inject'
 
 const EN: Record<StringKey, string> = {
   title: 'Rootkit Garden',
   subtitle: 'Malware Flower Garden',
-  'menu.tip': 'Cluster for synergies. Prune to dump heat. Plant→Dash→Prune for Exploit.',
+  'menu.tip': 'Link flowers. Inject aimed volleys. Ride wave Surges & Re-layout windows.',
   'menu.start': 'Enter — start   L — language   [ — difficulty',
-  'menu.controls': 'WASD move · Space dash · E plant · Q prune · R cycle seed',
+  'menu.controls': 'WASD move · Space dash · Shift/F Inject · E plant · Q prune · R cycle',
   'menu.touch': 'Touch: left drag move · right buttons plant/prune/dash/cycle',
   'menu.lang': 'Language',
   'menu.diff': 'Difficulty',
@@ -119,6 +128,7 @@ const EN: Record<StringKey, string> = {
   'story.2': 'Edge flowers link: Wormvine chains, Packet swarms, Slowfield buffs neighbors.',
   'story.3': 'Firing builds heat — prune to dump neighbor heat before overclock silence.',
   'story.4': 'Plant → Dash → Prune stacks Exploit. At 5, the garden bursts.',
+  'story.5': 'Hold aim with stick, tap Inject (Shift/F) to fire a manual volley — spends Exploit or cooldown.',
   'story.next': 'Enter — next',
   'story.skip': 'Esc — skip tutorial',
   pause: 'Paused',
@@ -140,6 +150,7 @@ const EN: Record<StringKey, string> = {
   'touch.plant': 'Plant',
   'touch.prune': 'Prune',
   'touch.dash': 'Dash',
+  'touch.inject': 'Inject',
   'touch.cycle': 'Seed',
   'touch.pause': '||',
   'touch.move': 'MOVE',
@@ -203,16 +214,24 @@ const EN: Record<StringKey, string> = {
   'call.penta': 'OVERCLOCK x5!!',
   'call.link': 'LINKED!',
   'call.exploit': 'EXPLOIT BURST!!',
+  'call.inject': 'INJECT!!',
+  'tip.inject': 'Inject: aimed volley (Shift/F)',
+  'wave.calm': 'Calm',
+  'wave.surge': 'Surge',
+  'wave.layout': 'Re-layout',
+  'wave.escalate': 'Escalate',
+  'hud.layout': 'RE-LAYOUT — move beds!',
 }
+
 
 
 
 const ZH: Record<StringKey, string> = {
   title: '惡意程式花園',
   subtitle: 'Rootkit Garden',
-  'menu.tip': '連花有加成。修剪洩過熱。種→衝→剪疊 Exploit。',
+  'menu.tip': '連花。Inject 瞄準齊射。抓湧浪／重新佈局節拍。',
   'menu.start': 'Enter 開始   L 語言   [ 難度',
-  'menu.controls': 'WASD 移動 · Space 衝刺 · E 種植 · Q 修剪 · R 切換種子',
+  'menu.controls': 'WASD 移動 · Space 衝刺 · Shift/F 注入 · E 種植 · Q 修剪 · R 換種',
   'menu.touch': '觸控：左半拖曳移動 · 右側按鈕 種/剪/衝/換種',
   'menu.lang': '語言',
   'menu.diff': '難度',
@@ -224,6 +243,7 @@ const ZH: Record<StringKey, string> = {
   'story.2': '鄰接連花：蠕蟲藤連鎖、封包成群、緩速場強化鄰居。',
   'story.3': '射擊會囤過熱——修剪可幫鄰居散熱，避免過熱沉默。',
   'story.4': '種→衝→剪疊 Exploit。滿 5 層花園齊射爆發。',
+  'story.5': '用搖桿瞄準，按 Inject（Shift／F）手動齊射——消耗 Exploit 或冷卻。',
   'story.next': 'Enter — 下一步',
   'story.skip': 'Esc — 跳過教學',
   pause: '暫停',
@@ -245,6 +265,7 @@ const ZH: Record<StringKey, string> = {
   'touch.plant': '種植',
   'touch.prune': '修剪',
   'touch.dash': '衝刺',
+  'touch.inject': '注入',
   'touch.cycle': '換種',
   'touch.pause': '||',
   'touch.move': '移動',
@@ -308,7 +329,15 @@ const ZH: Record<StringKey, string> = {
   'call.penta': '過熱五連!!',
   'call.link': '連花成立!',
   'call.exploit': 'EXPLOIT 爆發!!',
+  'call.inject': '注入!!',
+  'tip.inject': '注入：手動瞄準齊射（Shift／F）',
+  'wave.calm': '平靜',
+  'wave.surge': '湧浪',
+  'wave.layout': '重新佈局',
+  'wave.escalate': '升級壓制',
+  'hud.layout': '重新佈局 — 快移花床！',
 }
+
 
 
 

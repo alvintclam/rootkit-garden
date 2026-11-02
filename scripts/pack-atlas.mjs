@@ -6,26 +6,30 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const outPath = join(__dirname, '../src/render/atlas.gen.ts')
 
 const PALETTE = [
-  '#00000000',
-  '#7CFFB2',
-  '#102218',
-  '#3dff9a',
-  '#e8ffe8',
-  '#2a5a34',
-  '#5dff8a',
-  '#9bff3a',
-  '#ff6ad5',
-  '#6ecbff',
-  '#ffd166',
-  '#ff6b6b',
-  '#ffffff',
-  '#031018',
-  '#d7ffe0',
-  '#103010',
-  '#66e0ff',
-  '#ffb347',
-  '#c44dff',
-  '#2a1040',
+  '#00000000', // 0
+  '#7CFFB2', // 1 player
+  '#0a1f14', // 2 dark
+  '#3dff9a', // 3 accent
+  '#e8ffe8', // 4 dash white
+  '#1a3d28', // 5 stem
+  '#5dff8a', // 6 packet green
+  '#b8ff2a', // 7 wormvine lime
+  '#ff4ec8', // 8 payload hot pink
+  '#4eb8ff', // 9 scanner
+  '#ffc94a', // 10 drone
+  '#ff5a5a', // 11 heavy
+  '#ffffff', // 12 white
+  '#031018', // 13 void
+  '#d7ffe0', // 14 soft
+  '#0d2818', // 15 deep soil
+  '#66e0ff', // 16 slow cyan
+  '#ff9a3c', // 17 buckshot orange
+  '#c44dff', // 18 boss purple
+  '#2a1040', // 19 boss dark
+  '#9bff3a', // 20 glyph lime
+  '#ff6ad5', // 21 magenta
+  '#203820', // 22 circuit
+  '#86ffc8', // 23 soft mint
 ]
 
 function solid(w, h, c) {
@@ -41,135 +45,223 @@ function stamp(dst, src, ox, oy) {
   }
 }
 
+function disk(g, cx, cy, r, c) {
+  const rr = r * r
+  for (let y = 0; y < g.length; y++)
+    for (let x = 0; x < g[0].length; x++) {
+      const dx = x - cx
+      const dy = y - cy
+      if (dx * dx + dy * dy <= rr) g[y][x] = c
+    }
+}
+
+function ring(g, cx, cy, r0, r1, c) {
+  const a = r0 * r0
+  const b = r1 * r1
+  for (let y = 0; y < g.length; y++)
+    for (let x = 0; x < g[0].length; x++) {
+      const d = (x - cx) * (x - cx) + (y - cy) * (y - cy)
+      if (d <= b && d >= a) g[y][x] = c
+    }
+}
+
 const sprites = {
   player: (() => {
-    const g = solid(12, 16, 0)
-    for (let y = 0; y < 16; y++) for (let x = 2; x < 10; x++) g[y][x] = 1
-    g[4][3] = 2
-    g[4][7] = 2
-    for (let x = 0; x < 12; x++) g[14][x] = 3
+    const g = solid(14, 18, 0)
+    // hooded gardener silhouette
+    for (let y = 2; y < 14; y++) for (let x = 3; x < 11; x++) g[y][x] = 1
+    disk(g, 7, 4, 4, 1)
+    g[5][5] = 2
+    g[5][9] = 2
+    for (let x = 1; x < 13; x++) g[15][x] = 3
+    g[16][4] = 3
+    g[16][9] = 3
+    // glyph badge
+    g[9][7] = 21
+    g[10][6] = 20
+    g[10][8] = 20
     return g
   })(),
   playerDash: (() => {
-    const g = solid(12, 16, 0)
-    for (let y = 0; y < 16; y++) for (let x = 2; x < 10; x++) g[y][x] = 4
-    g[4][3] = 2
-    g[4][7] = 2
-    for (let x = 0; x < 12; x++) g[14][x] = 3
+    const g = solid(14, 18, 0)
+    for (let y = 2; y < 14; y++) for (let x = 3; x < 11; x++) g[y][x] = 4
+    disk(g, 7, 4, 4, 4)
+    g[5][5] = 2
+    g[5][9] = 2
+    for (let x = 0; x < 14; x++) g[15][x] = 3
+    g[9][7] = 21
     return g
   })(),
+  // Packet: hexagonal packet bloom
   flower0: (() => {
-    const g = solid(16, 18, 0)
-    for (let y = 8; y < 18; y++) {
-      g[y][7] = 5
+    const g = solid(18, 20, 0)
+    for (let y = 10; y < 20; y++) {
       g[y][8] = 5
+      g[y][9] = 5
     }
-    for (let y = 0; y < 10; y++) for (let x = 2; x < 14; x++) {
-      const dx = x - 8
-      const dy = y - 4
-      if (dx * dx + dy * dy <= 20) g[y][x] = 6
-    }
-    g[3][7] = 15
-    g[3][8] = 15
-    g[4][7] = 15
-    g[4][8] = 15
+    // hex head
+    const hex = [
+      [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+      [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+      [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+      [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    ]
+    for (let y = 0; y < hex.length; y++)
+      for (let x = 0; x < hex[0].length; x++) if (hex[y][x]) g[y + 1][x + 4] = 6
+    g[4][8] = 12
+    g[4][9] = 12
+    g[5][7] = 20
+    g[5][10] = 20
     return g
   })(),
+  // Wormvine: zigzag vine tendrils
   flower1: (() => {
-    const g = solid(16, 18, 0)
-    for (let y = 8; y < 18; y++) {
-      g[y][7] = 5
+    const g = solid(18, 20, 0)
+    for (let y = 10; y < 20; y++) {
       g[y][8] = 5
+      g[y][9] = 5
     }
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2
-      const cx = 8 + Math.round(Math.cos(a) * 5)
-      const cy = 4 + Math.round(Math.sin(a) * 5)
-      for (let yy = cy; yy < cy + 3; yy++) for (let xx = cx; xx < cx + 3; xx++) {
-        if (yy >= 0 && yy < 18 && xx >= 0 && xx < 16) g[yy][xx] = 7
-      }
+    // snake arms
+    const path = [
+      [8, 2], [7, 3], [6, 4], [5, 5], [4, 6], [5, 7], [6, 8],
+      [9, 2], [10, 3], [11, 4], [12, 5], [13, 6], [12, 7], [11, 8],
+      [8, 1], [9, 1], [8, 4], [9, 4], [8, 6], [9, 6],
+    ]
+    for (const [x, y] of path) {
+      g[y][x] = 7
+      if (x + 1 < 18) g[y][x + 1] = 7
     }
+    g[3][8] = 12
+    g[3][9] = 12
     return g
   })(),
+  // Payload: diamond rocket
   flower2: (() => {
-    const g = solid(16, 18, 0)
-    for (let y = 8; y < 18; y++) {
-      g[y][7] = 5
+    const g = solid(18, 20, 0)
+    for (let y = 11; y < 20; y++) {
       g[y][8] = 5
+      g[y][9] = 5
     }
-    for (let y = 0; y < 8; y++) for (let x = 1; x < 15; x++) g[y][x] = 8
-    for (let y = 2; y < 6; y++) for (let x = 5; x < 11; x++) g[y][x] = 12
+    for (let y = 0; y < 11; y++) {
+      const half = Math.floor(((y < 6 ? y : 10 - y) / 5) * 7)
+      for (let x = 9 - half; x <= 9 + half; x++) if (x >= 0 && x < 18) g[y][x] = 8
+    }
+    for (let y = 3; y < 7; y++) for (let x = 7; x < 11; x++) g[y][x] = 12
+    g[1][9] = 21
+    return g
+  })(),
+  // Slowfield: concentric rings
+  flower3: (() => {
+    const g = solid(18, 20, 0)
+    for (let y = 11; y < 20; y++) {
+      g[y][8] = 5
+      g[y][9] = 5
+    }
+    ring(g, 9, 6, 2, 4, 16)
+    ring(g, 9, 6, 5, 7, 16)
+    disk(g, 9, 6, 2, 12)
+    g[6][9] = 21
+    return g
+  })(),
+  // Buckshot: three pellet buds
+  flower4: (() => {
+    const g = solid(18, 20, 0)
+    for (let y = 11; y < 20; y++) {
+      g[y][8] = 5
+      g[y][9] = 5
+    }
+    disk(g, 4, 5, 3, 17)
+    disk(g, 9, 3, 3, 17)
+    disk(g, 14, 5, 3, 17)
+    g[5][4] = 12
+    g[3][9] = 12
+    g[5][14] = 12
     return g
   })(),
   enemy0: (() => {
     const g = solid(16, 16, 0)
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      const dx = x - 7.5
-      const dy = y - 7.5
-      if (dx * dx + dy * dy <= 36) g[y][x] = 9
-    }
-    for (let x = 5; x < 11; x++) g[7][x] = 13
+    disk(g, 7.5, 7.5, 6, 9)
+    // scan eye
+    for (let x = 4; x < 12; x++) g[7][x] = 13
+    g[7][8] = 12
+    g[5][8] = 16
     return g
   })(),
   enemy1: (() => {
     const g = solid(16, 16, 0)
+    // chevron drone
     for (let y = 0; y < 16; y++) {
-      const half = Math.floor((y / 15) * 8)
+      const half = Math.floor((y / 15) * 7)
       for (let x = 8 - half; x <= 8 + half; x++) if (x >= 0 && x < 16) g[y][x] = 10
     }
+    g[4][8] = 12
+    g[10][8] = 2
     return g
   })(),
   enemy2: (() => {
     const g = solid(20, 20, 0)
-    for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) g[y][x] = 11
-    for (let y = 2; y < 18; y++) for (let x = 2; x < 18; x++) {
-      if (y === 2 || y === 17 || x === 2 || x === 17) g[y][x] = 12
+    for (let y = 1; y < 19; y++) for (let x = 1; x < 19; x++) g[y][x] = 11
+    for (let y = 3; y < 17; y++) for (let x = 3; x < 17; x++) {
+      if (y === 3 || y === 16 || x === 3 || x === 16) g[y][x] = 12
     }
-    return g
-  })(),
-  flower3: (() => {
-    const g = solid(16, 18, 0)
-    for (let y = 8; y < 18; y++) {
-      g[y][7] = 5
-      g[y][8] = 5
-    }
-    for (let y = 0; y < 12; y++) for (let x = 0; x < 16; x++) {
-      const dx = x - 8
-      const dy = y - 5
-      if (dx * dx + dy * dy <= 28 && dx * dx + dy * dy >= 10) g[y][x] = 16
-    }
-    g[5][7] = 12
-    g[5][8] = 12
-    return g
-  })(),
-  flower4: (() => {
-    const g = solid(16, 18, 0)
-    for (let y = 8; y < 18; y++) {
-      g[y][7] = 5
-      g[y][8] = 5
-    }
-    for (let i = -1; i <= 1; i++) {
-      for (let y = 1; y < 7; y++) for (let x = 6 + i * 4; x < 10 + i * 4; x++) {
-        if (x >= 0 && x < 16) g[y][x] = 17
-      }
-    }
+    // patch glyph
+    g[9][9] = 13
+    g[10][8] = 13
+    g[10][10] = 13
     return g
   })(),
   enemy3: (() => {
     const g = solid(28, 28, 0)
-    for (let y = 0; y < 28; y++) for (let x = 0; x < 28; x++) {
-      const dx = x - 13.5
-      const dy = y - 13.5
-      if (dx * dx + dy * dy <= 140) g[y][x] = 18
+    disk(g, 13.5, 13.5, 12, 18)
+    for (let y = 5; y < 23; y++) for (let x = 5; x < 23; x++) {
+      if (y === 5 || y === 22 || x === 5 || x === 22) g[y][x] = 12
     }
-    for (let y = 4; y < 24; y++) for (let x = 4; x < 24; x++) {
-      if (y === 4 || y === 23 || x === 4 || x === 23) g[y][x] = 12
-    }
-    for (let y = 10; y < 14; y++) for (let x = 8; x < 20; x++) g[y][x] = 19
+    for (let y = 11; y < 15; y++) for (let x = 9; x < 19; x++) g[y][x] = 19
+    g[12][13] = 21
+    g[13][14] = 20
     return g
   })(),
   projectile: (() => {
-    const g = solid(4, 4, 14)
+    const g = solid(5, 5, 0)
+    disk(g, 2, 2, 2, 14)
+    g[2][2] = 12
+    return g
+  })(),
+  injectShot: (() => {
+    const g = solid(7, 7, 0)
+    disk(g, 3, 3, 3, 21)
+    disk(g, 3, 3, 1, 12)
+    return g
+  })(),
+  // Memorable title mark: rooted malware bloom
+  titleMark: (() => {
+    const g = solid(32, 32, 0)
+    // roots
+    for (let y = 18; y < 32; y++) {
+      g[y][15] = 5
+      g[y][16] = 5
+    }
+    for (let i = 0; i < 8; i++) {
+      g[20 + i][15 - i] = 22
+      g[20 + i][16 + i] = 22
+    }
+    // bloom hex
+    disk(g, 16, 12, 10, 6)
+    disk(g, 16, 12, 6, 3)
+    disk(g, 16, 12, 3, 21)
+    g[12][16] = 12
+    // glyph petals
+    for (let a = 0; a < 6; a++) {
+      const ang = (a / 6) * Math.PI * 2
+      const cx = 16 + Math.round(Math.cos(ang) * 8)
+      const cy = 12 + Math.round(Math.sin(ang) * 8)
+      disk(g, cx, cy, 2, 20)
+    }
     return g
   })(),
 }
@@ -179,7 +271,7 @@ const pad = 1
 let cursorX = 0
 let cursorY = 0
 let rowH = 0
-const sheetW = 96
+const sheetW = 128
 const frames = []
 const rows = []
 let row = solid(sheetW, 1, 0)

@@ -15,6 +15,7 @@ export const CmdBit = {
   Restart: 1 << 13,
   Lang: 1 << 14,
   Diff: 1 << 15,
+  Inject: 1 << 16,
 } as const
 
 export type InputCmd = {

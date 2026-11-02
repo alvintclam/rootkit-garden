@@ -27,12 +27,16 @@ import {
   CALL_PENTA,
   CALL_LINK,
   CALL_EXPLOIT,
+  CALL_INJECT,
+  WaveBeat,
+  PF_INJECT,
+  INJECT_CD,
 } from '../sim/constants'
 import { Phase } from '../sim/state'
 import type { World } from '../sim/world'
 import { ResultKey } from '../sim/world'
 import { Difficulty } from '../sim/difficulty'
-import { drawEnemy, drawFlower, drawPlayer, drawProjectile } from './sprites'
+import { drawEnemy, drawFlower, drawPlayer, drawProjectile, drawTitleMark } from './sprites'
 import { biomeLabel, flowerName, getLocale, t, tf, upgradeBlurb, upgradeTitle } from '../i18n/strings'
 import { isTouchUi, joyOrigin, touchBtnRect } from '../input/input'
 
@@ -45,11 +49,15 @@ function pressureTier(world: World): number {
 
 function fillBg(ctx: CanvasRenderingContext2D, world: World): void {
   const tier = pressureTier(world)
-  const bg = tier === 3 ? '#140818' : tier === 2 ? '#100818' : tier === 1 ? '#0a1420' : '#071018'
-  const grid = tier === 3 ? '#3a1840' : tier === 2 ? '#2a1830' : tier === 1 ? '#1a2838' : '#13281c'
-  const bed = tier === 3 ? '#a44dff' : tier === 2 ? '#6b3a1f' : '#1f6b3a'
+  const bg = tier === 3 ? '#12061a' : tier === 2 ? '#0c101c' : tier === 1 ? '#07141a' : '#05140f'
+  const grid = tier === 3 ? '#3a1850' : tier === 2 ? '#243048' : tier === 1 ? '#1a3840' : '#143828'
+  const bed = tier === 3 ? '#c44dff' : tier === 2 ? '#ff9a3c' : '#3dff9a'
+  const soil = tier === 3 ? '#1a0a22' : '#0a1c14'
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
+  // circuit soil fill
+  ctx.fillStyle = soil
+  ctx.fillRect(W * 0.5 - 90, H * 0.5 - 140, 180, 280)
   ctx.strokeStyle = grid
   ctx.lineWidth = 1
   for (let x = 0; x < W; x += 28) {
@@ -64,12 +72,33 @@ function fillBg(ctx: CanvasRenderingContext2D, world: World): void {
     ctx.lineTo(W, y)
     ctx.stroke()
   }
-  // taller central bed for portrait playable area
+  // circuit traces on bed
+  ctx.strokeStyle = tier >= 2 ? 'rgba(196,77,255,0.25)' : 'rgba(61,255,154,0.22)'
+  ctx.lineWidth = 2
+  const bx = W * 0.5
+  const by = H * 0.5
+  ctx.strokeRect(bx - 78, by - 128, 156, 256)
+  ctx.beginPath()
+  ctx.moveTo(bx - 78, by - 40)
+  ctx.lineTo(bx - 40, by - 40)
+  ctx.lineTo(bx - 40, by + 20)
+  ctx.lineTo(bx + 40, by + 20)
+  ctx.lineTo(bx + 40, by - 60)
+  ctx.lineTo(bx + 78, by - 60)
+  ctx.stroke()
+  // glyph petals corners
+  ctx.fillStyle = tier >= 2 ? 'rgba(255,106,213,0.2)' : 'rgba(155,255,58,0.18)'
+  for (const [px, py] of [[bx - 70, by - 120], [bx + 70, by - 120], [bx - 70, by + 120], [bx + 70, by + 120]]) {
+    ctx.beginPath()
+    ctx.arc(px, py, 6, 0, Math.PI * 2)
+    ctx.fill()
+  }
   ctx.strokeStyle = bed
-  ctx.strokeRect(W * 0.5 - 70, H * 0.5 - 110, 140, 220)
+  ctx.lineWidth = 2
+  ctx.strokeRect(bx - 70, by - 110, 140, 220)
   if (world.eggFlags & 1) {
     ctx.strokeStyle = '#7CFFB2'
-    ctx.strokeRect(W * 0.5 - 72, H * 0.5 - 112, 144, 224)
+    ctx.strokeRect(bx - 72, by - 112, 144, 224)
   }
 }
 
@@ -96,7 +125,7 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.font = '13px ui-monospace, monospace'
   ctx.fillText(`HP ${Math.ceil(world.playerHp)}/${world.playerMaxHp}`, 16, 28)
   ctx.fillText(`LV ${world.level}  XP ${world.xp}/${world.xpToNext}`, 16, 46)
-  ctx.fillText(`${t('hud.wave')} ${world.wave}  t-${sec}s`, 16, 64)
+  ctx.fillText(`${t('hud.wave')} ${world.wave} · ${waveBeatLabel(world)}  t-${sec}s`, 16, 64)
   ctx.fillStyle = tier >= 2 ? '#ffb347' : '#9ad5a8'
   ctx.fillText(biomeLabel(tier), 16, 82)
   // Exploit pips
@@ -118,7 +147,7 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   if (world.tick < 60 * 12) {
     ctx.fillStyle = 'rgba(124,255,178,0.75)'
     ctx.font = '11px ui-monospace, monospace'
-    ctx.fillText(t('tip.synergy'), 170, 102)
+    ctx.fillText(world.tick < 60 * 8 ? t('tip.inject') : t('tip.synergy'), 170, 102)
   }
   const def = FLOWER_DEFS[world.plantKind]
   ctx.fillStyle = def.color
@@ -157,7 +186,15 @@ function storyLine(world: World): string {
   if (world.storyStep === 0) return t('story.1')
   if (world.storyStep === 1) return t('story.2')
   if (world.storyStep === 2) return t('story.3')
-  return t('story.4')
+  if (world.storyStep === 3) return t('story.4')
+  return t('story.5')
+}
+
+function waveBeatLabel(world: World): string {
+  if (world.waveBeat === WaveBeat.Surge) return t('wave.surge')
+  if (world.waveBeat === WaveBeat.Layout) return t('wave.layout')
+  if (world.waveBeat === WaveBeat.Escalate) return t('wave.escalate')
+  return t('wave.calm')
 }
 
 function drawBossFx(ctx: CanvasRenderingContext2D, world: World): void {
@@ -235,6 +272,11 @@ function drawTouchChrome(ctx: CanvasRenderingContext2D, world: World): void {
       const r = touchBtnRect(i as 0 | 1 | 2 | 3)
       drawRoundBtn(ctx, r.x, r.y, r.w, r.h, labels[i], fills[i])
     }
+    const inj = touchBtnRect(11)
+    const injFill = world.exploitStacks >= 1 || world.injectCd <= 0
+      ? 'rgba(64,16,48,0.75)'
+      : 'rgba(32,24,40,0.45)'
+    drawRoundBtn(ctx, inj.x, inj.y, inj.w, inj.h, t('touch.inject'), injFill)
     const p = touchBtnRect(4)
     drawRoundBtn(ctx, p.x, p.y, p.w, p.h, t('touch.pause'), 'rgba(0,0,0,0.45)')
   }
@@ -274,21 +316,31 @@ function drawTouchChrome(ctx: CanvasRenderingContext2D, world: World): void {
 
 
 function drawSynergyLinks(ctx: CanvasRenderingContext2D, world: World): void {
-  ctx.lineWidth = 1.5
+  ctx.lineWidth = 2
   for (let i = 0; i < MAX_FLOWERS; i++) {
     if (!world.flowerAlive[i]) continue
     const a = world.flowerLinkA[i]
     if (a >= 0 && world.flowerAlive[a] && a > i) {
       const colony = (world.flowerFlags[i] & FF_COLONY) !== 0
-      ctx.strokeStyle = colony ? 'rgba(255,106,213,0.45)' : 'rgba(124,255,178,0.35)'
+      ctx.strokeStyle = colony ? 'rgba(255,106,213,0.65)' : 'rgba(124,255,178,0.5)'
       ctx.beginPath()
       ctx.moveTo(world.flowerX[i], world.flowerY[i])
       ctx.lineTo(world.flowerX[a], world.flowerY[a])
       ctx.stroke()
+      const mx = (world.flowerX[i] + world.flowerX[a]) * 0.5
+      const my = (world.flowerY[i] + world.flowerY[a]) * 0.5
+      ctx.fillStyle = colony ? '#ff6ad5' : '#7CFFB2'
+      ctx.beginPath()
+      ctx.moveTo(mx, my - 4)
+      ctx.lineTo(mx + 4, my)
+      ctx.lineTo(mx, my + 4)
+      ctx.lineTo(mx - 4, my)
+      ctx.closePath()
+      ctx.fill()
     }
     const b = world.flowerLinkB[i]
     if (b >= 0 && world.flowerAlive[b] && b > i) {
-      ctx.strokeStyle = 'rgba(102,224,255,0.3)'
+      ctx.strokeStyle = 'rgba(102,224,255,0.45)'
       ctx.beginPath()
       ctx.moveTo(world.flowerX[i], world.flowerY[i])
       ctx.lineTo(world.flowerX[b], world.flowerY[b])
@@ -418,6 +470,7 @@ function calloutText(world: World): string {
   if (world.calloutId === CALL_PENTA) return t('call.penta')
   if (world.calloutId === CALL_LINK) return t('call.link')
   if (world.calloutId === CALL_EXPLOIT) return t('call.exploit')
+  if (world.calloutId === CALL_INJECT) return t('call.inject')
   return ''
 }
 
@@ -512,7 +565,7 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
   }
   for (let i = 0; i < MAX_PROJECTILES; i++) {
     if (!world.projAlive[i]) continue
-    drawProjectile(ctx, world.projX[i], world.projY[i])
+    drawProjectile(ctx, world.projX[i], world.projY[i], (world.projFlags[i] & PF_INJECT) !== 0)
   }
   for (let i = 0; i < MAX_PARTICLES; i++) {
     if (!world.partAlive[i]) continue
@@ -539,9 +592,38 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
   drawBossFx(ctx, world)
   if (world.phase !== Phase.Menu && world.phase !== Phase.Story) {
     drawPlayer(ctx, world.playerX, world.playerY, world.dashLeft > 0)
+    // aim reticle for Inject
+    if (world.phase === Phase.Run) {
+      const ready = world.exploitStacks >= 1 || world.injectCd <= 0
+      const ax = world.playerX + world.aimX * 36
+      const ay = world.playerY + world.aimY * 36
+      ctx.strokeStyle = ready ? 'rgba(255,106,213,0.85)' : 'rgba(120,120,140,0.4)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(world.playerX, world.playerY)
+      ctx.lineTo(ax, ay)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(ax, ay, 5, 0, Math.PI * 2)
+      ctx.stroke()
+      if (world.injectCd > 0 && world.exploitStacks < 1) {
+        ctx.fillStyle = 'rgba(180,180,200,0.5)'
+        ctx.font = '10px ui-monospace, monospace'
+        ctx.fillText(String(Math.ceil(world.injectCd / 60)), ax + 8, ay)
+      }
+    }
   }
   if (world.phase === Phase.Run || world.phase === Phase.Pause || world.phase === Phase.LevelUp) {
     hud(ctx, world)
+    if (world.layoutLeft > 0 || world.waveBeat === WaveBeat.Layout) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'
+      ctx.fillRect(W * 0.5 - 160, 120, 320, 36)
+      ctx.fillStyle = '#ffb347'
+      ctx.font = 'bold 15px ui-monospace, monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(t('hud.layout'), W * 0.5, 144)
+      ctx.textAlign = 'left'
+    }
     if (showFps) {
       ctx.fillStyle = '#7CFFB2'
       ctx.font = '12px ui-monospace, monospace'
@@ -549,9 +631,11 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
     }
   }
   if (world.phase === Phase.Menu) {
+    drawTitleMark(ctx, W * 0.5, H * 0.11, 2)
     const lines = [
       t('subtitle'),
       t('menu.tip'),
+      t('tip.inject'),
       '',
       t('menu.start'),
       t('menu.controls'),

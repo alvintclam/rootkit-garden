@@ -28,13 +28,14 @@ let tapDiff = false
 let tapPick1 = false
 let tapPick2 = false
 let tapPick3 = false
+let tapInject = false
 
 const BTN_W = 108
 const BTN_H = 64
 const JOY_DEAD = 18
 const JOY_MAX = 56
 
-type BtnId = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+type BtnId = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
 
 function keyOf(e: KeyboardEvent): string {
   return e.code
@@ -58,6 +59,7 @@ export function touchBtnRect(id: BtnId): { x: number; y: number; w: number; h: n
   if (id === 1) return { x, y: H - 3 * (BTN_H + 10) - 24, w: BTN_W, h: BTN_H } // prune
   if (id === 2) return { x, y: H - 2 * (BTN_H + 10) - 24, w: BTN_W, h: BTN_H } // dash
   if (id === 3) return { x, y: H - 1 * (BTN_H + 10) - 24, w: BTN_W, h: BTN_H } // cycle
+  if (id === 11) return { x: x - BTN_W - 8, y: H - 2 * (BTN_H + 10) - 24, w: BTN_W, h: BTN_H } // inject
   if (id === 4) return { x: W - 72, y: 108, w: 58, h: 44 } // pause
   // menu / result / level-up hit zones
   if (id === 5) return { x: W * 0.5 - 120, y: H * 0.72, w: 240, h: 56 } // confirm
@@ -92,6 +94,10 @@ function fireBtnAt(x: number, y: number): boolean {
   }
   if (hit(x, y, 2)) {
     tapDash = true
+    return true
+  }
+  if (hit(x, y, 11)) {
+    tapInject = true
     return true
   }
   if (hit(x, y, 3)) {
@@ -148,6 +154,8 @@ export function bindInput(target: HTMLElement): void {
       k === 'KeyE' ||
       k === 'KeyQ' ||
       k === 'KeyF' ||
+      k === 'ShiftLeft' ||
+      k === 'ShiftRight' ||
       k === 'KeyR' ||
       k === 'KeyL' ||
       k === 'KeyD' ||
@@ -255,6 +263,7 @@ export function pollBits(): number {
   }
 
   if (pressed.has('Space') || tapDash) bits |= CmdBit.Dash
+  if (pressed.has('ShiftLeft') || pressed.has('ShiftRight') || pressed.has('KeyF') || tapInject) bits |= CmdBit.Inject
   if (pressed.has('KeyE') || plantClick || tapPlant) bits |= CmdBit.Plant
   if (pressed.has('KeyQ') || pressed.has('KeyX') || tapPrune) bits |= CmdBit.Prune
   if (pressed.has('KeyR') || pressed.has('Tab') || tapCycle) bits |= CmdBit.Cycle
@@ -280,5 +289,6 @@ export function pollBits(): number {
   tapPick1 = false
   tapPick2 = false
   tapPick3 = false
+  tapInject = false
   return bits
 }

@@ -35,7 +35,7 @@ const uiKeys = new Set<string>()
 window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyC') uiKeys.add('C')
   if (e.code === 'KeyV') uiKeys.add('V')
-  if (e.code === 'KeyF') {
+  if (e.code === 'KeyG') {
     showFps = !showFps
     e.preventDefault()
   }

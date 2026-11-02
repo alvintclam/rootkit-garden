@@ -13,4 +13,6 @@ export const SimEvent = {
   MultiKill: 1 << 11,
   ExploitStack: 1 << 12,
   SynergyForm: 1 << 13,
+  Inject: 1 << 14,
+  WaveBeat: 1 << 15,
 } as const

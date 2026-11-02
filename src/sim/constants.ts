@@ -80,3 +80,22 @@ export const CALL_TRIPLE = 1
 export const CALL_PENTA = 2
 export const CALL_LINK = 3
 export const CALL_EXPLOIT = 4
+export const CALL_INJECT = 5
+
+/** Inject active skill */
+export const INJECT_CD = 96
+export const INJECT_COST = 1
+export const INJECT_SHOTS = 5
+export const INJECT_SPREAD = 0.22
+export const INJECT_DMG = 22
+export const INJECT_SPEED = 9
+
+/** Wave beats */
+export const WAVE_BEAT_LEN = 60 * 18
+export const WaveBeat = {
+  Calm: 0,
+  Surge: 1,
+  Layout: 2,
+  Escalate: 3,
+} as const
+export const PF_INJECT = 4

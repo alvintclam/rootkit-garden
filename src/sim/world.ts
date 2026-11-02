@@ -146,6 +146,12 @@ export type World = {
   deathPopX: number
   deathPopY: number
   deathPopLife: number
+  aimX: number
+  aimY: number
+  injectCd: number
+  waveBeat: number
+  layoutLeft: number
+  prevWaveBeat: number
   partKind: Uint8Array
   floatAlive: Uint8Array
   floatX: Float32Array
@@ -295,6 +301,12 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     deathPopX: 0,
     deathPopY: 0,
     deathPopLife: 0,
+    aimX: 0,
+    aimY: -1,
+    injectCd: 0,
+    waveBeat: 0,
+    layoutLeft: 0,
+    prevWaveBeat: -1,
     partKind: new Uint8Array(MAX_PARTICLES),
     floatAlive: new Uint8Array(MAX_FLOATS),
     floatX: new Float32Array(MAX_FLOATS),
@@ -390,6 +402,12 @@ export function resetRun(world: World, seed: number): void {
   world.levelSnap = 0
   world.linkCount = 0
   world.deathPopLife = 0
+  world.aimX = 0
+  world.aimY = -1
+  world.injectCd = 0
+  world.waveBeat = 0
+  world.layoutLeft = 0
+  world.prevWaveBeat = -1
   world.partKind.fill(0)
   world.floatAlive.fill(0)
   world.trailLife.fill(0)

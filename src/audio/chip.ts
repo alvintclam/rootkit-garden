@@ -19,6 +19,8 @@ type SfxKind =
   | 'exploit'
   | 'stack'
   | 'warn'
+  | 'inject'
+  | 'wave'
 
 let ac: AudioContext | null = null
 let master: GainNode | null = null
@@ -301,6 +303,14 @@ export function beep(kind: SfxKind): void {
     noiseBurst(0.1, 0.055)
   } else if (kind === 'stack') {
     tone(500 + multiPitch * 40, 0.04, 'triangle', 0.045, 700)
+  } else if (kind === 'inject') {
+    tone(160, 0.06, 'sawtooth', 0.08, 80)
+    tone(720, 0.08, 'square', 0.07, 1400)
+    tone(1100, 0.05, 'triangle', 0.05)
+    noiseBurst(0.07, 0.05)
+  } else if (kind === 'wave') {
+    tone(260, 0.07, 'triangle', 0.05, 400)
+    tone(390, 0.09, 'square', 0.04)
   } else {
     tone(480, 0.045, 'square', 0.05)
   }
@@ -336,4 +346,7 @@ export function consumeSimEvents(events: number): void {
     beep('exploit')
   }
   if (events & SimEvent.ExploitStack) beep('stack')
+  if (events & SimEvent.Inject) beep('inject')
+  if (events & SimEvent.WaveBeat) beep('wave')
 }
+

@@ -48,6 +48,7 @@ npm run tla:check
 | WASD / arrows | Move |
 | **Touch left-half drag** | Virtual stick → move |
 | Space / **Dash**|| btn** | Dash |
+| Shift / F / **Inject** pad | Aimed Inject volley |
 | E / left click / **Plant**|| btn** | Plant |
 | Q / **Prune**|| btn** | Prune |
 | R / Tab / **Seed**|| btn** | Cycle seed |
@@ -99,6 +100,8 @@ Spec `spec/garden_phases.tla` matches `PHASE_EDGE_NAMES`; Node tests enforce 1:1
 - **Adjacency synergies**: Wormvine chain, Packet swarm, Slowfield neighbor buff, Buckshot+Payload spike, 3+ Root colony
 - **Heat / Overclock**: firing builds heat; miss/silence at high heat; prune dumps neighbor heat; dash vents
 - **Exploit combo**: Plant→Dash→Prune stacks (cap 5) → garden-wide burst
+- **Inject**: aimed manual volley (Shift/F / Inject pad) spends Exploit or cooldown
+- **Wave beats**: Calm → Surge → Re-layout pause → Escalate (+ Boss telegraph)
 - Enemy agency: Scanner mark cones, Drone strafe orbits, Heavyscan plant-block patches, Boss purge
 - Mid-run **Rootkit Sentinel** boss at t=60s (telegraph + pulse + purge)
 - Eggs: seed `1337` title tease; konami-lite `↑↑↓↓`; prune streak ×7 ritual heal
@@ -115,13 +118,13 @@ Spec `spec/garden_phases.tla` matches `PHASE_EDGE_NAMES`; Node tests enforce 1:1
 
 ## Measured size
 
-**First-download gzip (portrait + touch + zh-Hant): ~21.8 KB** (budget 150 KB).
+**First-download gzip (portrait + touch + zh-Hant): ~27.0 KB** (budget 150 KB).
 
 | Asset | gzip |
 | --- | --- |
-| `dist/index.html` | ~1035 B |
-| entry JS | ~20727 B |
-| **total** | **~21762 B** |
+| `dist/index.html` | ~1036 B |
+| entry JS | ~25957 B |
+| **total** | **~26993 B** |
 
 Resolution **540×960** (9:16). Re-run `npm run build && npm run check:size` after changes.
 

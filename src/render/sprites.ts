@@ -6,16 +6,17 @@ import {
   ATLAS_W,
 } from './atlas.gen'
 
-function drawFrame(ctx: CanvasRenderingContext2D, frameId: number, x: number, y: number): void {
+function drawFrame(ctx: CanvasRenderingContext2D, frameId: number, x: number, y: number, scale = 1): void {
   const frame = ATLAS_FRAMES[frameId]
-  const ox = Math.round(x - frame.w / 2)
-  const oy = Math.round(y - frame.h / 2)
+  const ox = Math.round(x - (frame.w * scale) / 2)
+  const oy = Math.round(y - (frame.h * scale) / 2)
   for (let py = 0; py < frame.h; py++) {
     for (let px = 0; px < frame.w; px++) {
       const idx = ATLAS_PIXELS[(frame.y + py) * ATLAS_W + (frame.x + px)]
       if (!idx) continue
       ctx.fillStyle = ATLAS_PALETTE[idx]
-      ctx.fillRect(ox + px, oy + py, 1, 1)
+      if (scale === 1) ctx.fillRect(ox + px, oy + py, 1, 1)
+      else ctx.fillRect(ox + px * scale, oy + py * scale, scale, scale)
     }
   }
 }
@@ -57,6 +58,10 @@ export function drawEnemy(
   drawFrame(ctx, ATLAS_INDEX[name], x, y)
 }
 
-export function drawProjectile(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-  drawFrame(ctx, ATLAS_INDEX.projectile, x, y)
+export function drawProjectile(ctx: CanvasRenderingContext2D, x: number, y: number, inject = false): void {
+  drawFrame(ctx, ATLAS_INDEX[inject ? 'injectShot' : 'projectile'], x, y)
+}
+
+export function drawTitleMark(ctx: CanvasRenderingContext2D, x: number, y: number, scale = 2): void {
+  drawFrame(ctx, ATLAS_INDEX.titleMark, x, y, scale)
 }
