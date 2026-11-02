@@ -1,0 +1,29 @@
+{
+  "name": "rootkit-garden",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check:size": "node scripts/check-size.mjs",
+    "check:hot": "node scripts/check-hot.mjs",
+    "test": "tsx --test src/sim/rng.test.ts src/sim/replay.test.ts src/sim/state.test.ts src/sim/verify-replay.test.ts",
+    "bot": "tsx scripts/bot.ts",
+    "tune": "tsx scripts/bot.ts --runs 8 --seconds 45",
+    "prebuild": "node scripts/pack-atlas.mjs",
+    "atlas": "node scripts/pack-atlas.mjs",
+    "verify-replay": "tsx scripts/verify-replay.ts",
+    "tla:fetch": "node scripts/fetch-tla.mjs",
+    "tla:check": "tools/jre/bin/java -cp tools/tla2tools.jar tlc2.TLC -config spec/garden_phases.cfg spec/garden_phases.tla",
+    "perf": "tsx scripts/perf.ts",
+    "verify-server": "tsx scripts/verify-server.ts",
+    "tla:check:system": "java -cp tools/tla2tools.jar tlc2.TLC -config spec/garden_phases.cfg spec/garden_phases.tla"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}
