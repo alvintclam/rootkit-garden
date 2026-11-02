@@ -15,6 +15,11 @@ export const UpgradeId = {
   Hp: 9,
   UnlockSlowfield: 10,
   UnlockBuckshot: 11,
+  SynergyAmp: 12,
+  HeatSink: 13,
+  ExploitWindow: 14,
+  ColonyStrength: 15,
+  CoolantDash: 16,
 } as const
 
 export type UpgradeIdValue = (typeof UpgradeId)[keyof typeof UpgradeId]
@@ -32,6 +37,11 @@ export const UPGRADE_IDS: readonly UpgradeIdValue[] = [
   UpgradeId.PruneHeal,
   UpgradeId.MoveSpeed,
   UpgradeId.Hp,
+  UpgradeId.SynergyAmp,
+  UpgradeId.HeatSink,
+  UpgradeId.ExploitWindow,
+  UpgradeId.ColonyStrength,
+  UpgradeId.CoolantDash,
 ]
 
 export type PlayerUpgrades = {
@@ -44,6 +54,12 @@ export type PlayerUpgrades = {
   pruneHeal: number
   moveMul: number
   maxHpBonus: number
+  synergyAmp: number
+  heatMul: number
+  pruneDumpMul: number
+  exploitWindowMul: number
+  colonyMul: number
+  dashVentMul: number
 }
 
 export function createUpgrades(): PlayerUpgrades {
@@ -58,6 +74,12 @@ export function createUpgrades(): PlayerUpgrades {
     pruneHeal: 0,
     moveMul: 1,
     maxHpBonus: 0,
+    synergyAmp: 1,
+    heatMul: 1,
+    pruneDumpMul: 1,
+    exploitWindowMul: 1,
+    colonyMul: 1,
+    dashVentMul: 1,
   }
 }
 
@@ -74,6 +96,13 @@ export function applyUpgrade(u: PlayerUpgrades, id: UpgradeIdValue): void {
   else if (id === UpgradeId.PruneHeal) u.pruneHeal += 8
   else if (id === UpgradeId.MoveSpeed) u.moveMul *= 1.12
   else if (id === UpgradeId.Hp) u.maxHpBonus += 25
+  else if (id === UpgradeId.SynergyAmp) u.synergyAmp *= 1.35
+  else if (id === UpgradeId.HeatSink) {
+    u.heatMul *= 0.72
+    u.pruneDumpMul *= 1.4
+  } else if (id === UpgradeId.ExploitWindow) u.exploitWindowMul *= 1.45
+  else if (id === UpgradeId.ColonyStrength) u.colonyMul *= 1.5
+  else if (id === UpgradeId.CoolantDash) u.dashVentMul *= 1.6
 }
 
 export function rollUpgradeChoices(rng: Rng, u: PlayerUpgrades, out: number[]): void {

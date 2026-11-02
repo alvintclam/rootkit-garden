@@ -22,7 +22,7 @@ export const ENEMY_DEFS: readonly EnemyDef[] = [
     kind: EnemyKind.Scanner,
     name: 'Scanner',
     hp: 18,
-    speed: 0.85,
+    speed: 0.88,
     radius: 10,
     xp: 4,
     color: '#6ecbff',
@@ -31,7 +31,7 @@ export const ENEMY_DEFS: readonly EnemyDef[] = [
     kind: EnemyKind.Drone,
     name: 'AV Drone',
     hp: 28,
-    speed: 1.15,
+    speed: 1.18,
     radius: 11,
     xp: 6,
     color: '#ffd166',
@@ -62,3 +62,4 @@ export const BOSS_PULSE_RANGE = 170
 export const BOSS_PULSE_DAMAGE = 14
 export const BOSS_PULSE_CD = 120
 export const BOSS_PULSE_TELE = 36
+export const BOSS_MAX_HP = 520

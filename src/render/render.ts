@@ -1,6 +1,22 @@
 import { FLOWER_DEFS } from '../sim/flowers'
-import { BOSS_PULSE_RANGE, BOSS_TELE_TICKS, ENEMY_DEFS } from '../sim/enemies'
-import { H, MAX_ENEMIES, MAX_FLOWERS, MAX_PARTICLES, MAX_PROJECTILES, SURVIVE_TICKS, W } from '../sim/constants'
+import { BOSS_PULSE_RANGE, BOSS_TELE_TICKS, ENEMY_DEFS, EnemyKind } from '../sim/enemies'
+import {
+  H,
+  MAX_ENEMIES,
+  MAX_FLOWERS,
+  MAX_PARTICLES,
+  MAX_PATCHES,
+  MAX_PROJECTILES,
+  PATCH_RADIUS,
+  SURVIVE_TICKS,
+  W,
+  HEAT_MISS,
+  HEAT_SILENCE,
+  EXPLOIT_CAP,
+  FF_COLONY,
+  SCAN_RANGE,
+  SCAN_HALF_ANGLE,
+} from '../sim/constants'
 import { Phase } from '../sim/state'
 import type { World } from '../sim/world'
 import { ResultKey } from '../sim/world'
@@ -64,7 +80,7 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   const sec = Math.ceil(remain / 60)
   const tier = pressureTier(world)
   ctx.fillStyle = 'rgba(0,0,0,0.5)'
-  ctx.fillRect(8, 8, W - 16, 96)
+  ctx.fillRect(8, 8, W - 16, 112)
   ctx.fillStyle = '#c8facc'
   ctx.font = '13px ui-monospace, monospace'
   ctx.fillText(`HP ${Math.ceil(world.playerHp)}/${world.playerMaxHp}`, 16, 28)
@@ -72,6 +88,18 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.fillText(`${t('hud.wave')} ${world.wave}  t-${sec}s`, 16, 64)
   ctx.fillStyle = tier >= 2 ? '#ffb347' : '#9ad5a8'
   ctx.fillText(biomeLabel(tier), 16, 82)
+  // Exploit pips
+  ctx.fillStyle = '#9ad5a8'
+  ctx.fillText(t('hud.exploit'), 16, 102)
+  for (let p = 0; p < EXPLOIT_CAP; p++) {
+    ctx.fillStyle = p < world.exploitStacks ? '#ff6ad5' : 'rgba(255,106,213,0.2)'
+    ctx.fillRect(90 + p * 14, 92, 10, 10)
+  }
+  if (world.tick < 60 * 12) {
+    ctx.fillStyle = 'rgba(124,255,178,0.75)'
+    ctx.font = '11px ui-monospace, monospace'
+    ctx.fillText(t('tip.synergy'), 170, 102)
+  }
   const def = FLOWER_DEFS[world.plantKind]
   ctx.fillStyle = def.color
   ctx.textAlign = 'right'
@@ -82,6 +110,10 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   if (world.eggFlags & 2) {
     ctx.fillStyle = '#ff6ad5'
     ctx.fillText(t('egg.konami'), W - 16, 82)
+  }
+  if (world.exploitEmpower > 0) {
+    ctx.fillStyle = '#ff6ad5'
+    ctx.fillText('EMPOWER', W - 16, 102)
   }
   ctx.textAlign = 'left'
 }
@@ -104,7 +136,8 @@ function overlay(ctx: CanvasRenderingContext2D, title: string, lines: string[]):
 function storyLine(world: World): string {
   if (world.storyStep === 0) return t('story.1')
   if (world.storyStep === 1) return t('story.2')
-  return t('story.3')
+  if (world.storyStep === 2) return t('story.3')
+  return t('story.4')
 }
 
 function drawBossFx(ctx: CanvasRenderingContext2D, world: World): void {
@@ -219,12 +252,96 @@ function drawTouchChrome(ctx: CanvasRenderingContext2D, world: World): void {
   }
 }
 
+
+function drawSynergyLinks(ctx: CanvasRenderingContext2D, world: World): void {
+  ctx.lineWidth = 1.5
+  for (let i = 0; i < MAX_FLOWERS; i++) {
+    if (!world.flowerAlive[i]) continue
+    const a = world.flowerLinkA[i]
+    if (a >= 0 && world.flowerAlive[a] && a > i) {
+      const colony = (world.flowerFlags[i] & FF_COLONY) !== 0
+      ctx.strokeStyle = colony ? 'rgba(255,106,213,0.45)' : 'rgba(124,255,178,0.35)'
+      ctx.beginPath()
+      ctx.moveTo(world.flowerX[i], world.flowerY[i])
+      ctx.lineTo(world.flowerX[a], world.flowerY[a])
+      ctx.stroke()
+    }
+    const b = world.flowerLinkB[i]
+    if (b >= 0 && world.flowerAlive[b] && b > i) {
+      ctx.strokeStyle = 'rgba(102,224,255,0.3)'
+      ctx.beginPath()
+      ctx.moveTo(world.flowerX[i], world.flowerY[i])
+      ctx.lineTo(world.flowerX[b], world.flowerY[b])
+      ctx.stroke()
+    }
+  }
+}
+
+function drawPatches(ctx: CanvasRenderingContext2D, world: World): void {
+  for (let i = 0; i < MAX_PATCHES; i++) {
+    if (!world.patchAlive[i]) continue
+    const alpha = 0.2 + 0.15 * (world.patchLife[i] / 160)
+    ctx.fillStyle = `rgba(255,80,80,${alpha})`
+    ctx.beginPath()
+    ctx.arc(world.patchX[i], world.patchY[i], PATCH_RADIUS, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(255,120,120,0.5)'
+    ctx.stroke()
+  }
+}
+
+function drawScanCones(ctx: CanvasRenderingContext2D, world: World): void {
+  for (let i = 0; i < MAX_ENEMIES; i++) {
+    if (!world.enemyAlive[i]) continue
+    if (world.enemyKind[i] !== EnemyKind.Scanner) continue
+    if (world.enemyTimer[i] > 18) continue
+    const ang = world.enemyPhase[i]
+    ctx.fillStyle = 'rgba(110,203,255,0.12)'
+    ctx.beginPath()
+    ctx.moveTo(world.enemyX[i], world.enemyY[i])
+    ctx.arc(world.enemyX[i], world.enemyY[i], SCAN_RANGE, ang - SCAN_HALF_ANGLE, ang + SCAN_HALF_ANGLE)
+    ctx.closePath()
+    ctx.fill()
+  }
+}
+
 export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0, showFps = false): void {
   fillBg(ctx, world)
+  drawPatches(ctx, world)
+  drawSynergyLinks(ctx, world)
   for (let i = 0; i < MAX_FLOWERS; i++) {
     if (!world.flowerAlive[i]) continue
     const def = FLOWER_DEFS[world.flowerKind[i]]
     drawFlower(ctx, world.flowerX[i], world.flowerY[i], def.color, world.flowerKind[i])
+    // heat tint ring
+    const heat = world.flowerHeat[i]
+    if (heat > 20) {
+      const hAlpha = Math.min(0.65, heat / 100)
+      ctx.strokeStyle = heat >= HEAT_SILENCE ? `rgba(255,60,60,${hAlpha})` : heat >= HEAT_MISS ? `rgba(255,160,60,${hAlpha})` : `rgba(255,220,100,${hAlpha * 0.5})`
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(world.flowerX[i], world.flowerY[i], 12, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    if (world.flowerMark[i] > 0) {
+      ctx.strokeStyle = 'rgba(110,203,255,0.7)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(world.flowerX[i], world.flowerY[i], 16, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    if (world.flowerSilence[i] > 0) {
+      ctx.fillStyle = 'rgba(40,40,50,0.35)'
+      ctx.beginPath()
+      ctx.arc(world.flowerX[i], world.flowerY[i], 10, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    if ((world.flowerFlags[i] & FF_COLONY) !== 0) {
+      ctx.strokeStyle = 'rgba(255,106,213,0.35)'
+      ctx.beginPath()
+      ctx.arc(world.flowerX[i], world.flowerY[i], 22 + (world.tick % 40) * 0.15, 0, Math.PI * 2)
+      ctx.stroke()
+    }
     if (world.flowerKind[i] === 3) {
       ctx.strokeStyle = 'rgba(102,224,255,0.25)'
       ctx.beginPath()
@@ -241,6 +358,7 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
     ctx.fillStyle = '#9bff3a'
     ctx.fillRect(world.partX[i] - 1, world.partY[i] - 1, 2, 2)
   }
+  drawScanCones(ctx, world)
   for (let i = 0; i < MAX_ENEMIES; i++) {
     if (!world.enemyAlive[i]) continue
     const def = ENEMY_DEFS[world.enemyKind[i]]

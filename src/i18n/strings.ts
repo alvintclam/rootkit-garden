@@ -83,11 +83,25 @@ export type StringKey =
   | 'up.10.b'
   | 'up.11.t'
   | 'up.11.b'
+  | 'up.12.t'
+  | 'up.12.b'
+  | 'up.13.t'
+  | 'up.13.b'
+  | 'up.14.t'
+  | 'up.14.b'
+  | 'up.15.t'
+  | 'up.15.b'
+  | 'up.16.t'
+  | 'up.16.b'
+  | 'story.4'
+  | 'hud.exploit'
+  | 'hud.heat'
+  | 'tip.synergy'
 
 const EN: Record<StringKey, string> = {
   title: 'Rootkit Garden',
   subtitle: 'Malware Flower Garden',
-  'menu.tip': 'Plant flowers. They shoot. Prune to reclaim. Survive.',
+  'menu.tip': 'Cluster for synergies. Prune to dump heat. Plant→Dash→Prune for Exploit.',
   'menu.start': 'Enter — start   L — language   [ — difficulty',
   'menu.controls': 'WASD move · Space dash · E plant · Q prune · R cycle seed',
   'menu.touch': 'Touch: left drag move · right buttons plant/prune/dash/cycle',
@@ -98,8 +112,9 @@ const EN: Record<StringKey, string> = {
   'diff.hard': 'Hard',
   'diff.nightmare': 'Nightmare',
   'story.1': 'Press E to plant a malware flower at your feet.',
-  'story.2': 'Flowers auto-fire at nearby antivirus drones.',
-  'story.3': 'Press Q to prune a flower and reclaim the bed.',
+  'story.2': 'Edge flowers link: Wormvine chains, Packet swarms, Slowfield buffs neighbors.',
+  'story.3': 'Firing builds heat — prune to dump neighbor heat before overclock silence.',
+  'story.4': 'Plant → Dash → Prune stacks Exploit. At 5, the garden bursts.',
   'story.next': 'Enter — next',
   'story.skip': 'Esc — skip tutorial',
   pause: 'Paused',
@@ -167,12 +182,26 @@ const EN: Record<StringKey, string> = {
   'up.10.b': 'Unlock Slowfield aura flower',
   'up.11.t': 'Buckshot Seed',
   'up.11.b': 'Unlock Buckshot spread flower',
+  'up.12.t': 'Synergy Range',
+  'up.12.b': 'Amplify adjacency link effects',
+  'up.13.t': 'Heat Sink',
+  'up.13.b': 'Less heat gain; prune dumps more',
+  'up.14.t': 'Exploit Window',
+  'up.14.b': 'Longer combo window for Exploit',
+  'up.15.t': 'Colony Strength',
+  'up.15.b': 'Stronger 3+ cluster Root colony',
+  'up.16.t': 'Coolant Dash',
+  'up.16.b': 'Dash vents more flower heat',
+  'hud.exploit': 'Exploit',
+  'hud.heat': 'HEAT',
+  'tip.synergy': 'Link flowers · manage heat · chase Exploit',
 }
+
 
 const ZH: Record<StringKey, string> = {
   title: '惡意程式花園',
   subtitle: 'Rootkit Garden',
-  'menu.tip': '種花。花會射擊。修剪回收空位。活下去。',
+  'menu.tip': '連花有加成。修剪洩過熱。種→衝→剪疊 Exploit。',
   'menu.start': 'Enter 開始   L 語言   [ 難度',
   'menu.controls': 'WASD 移動 · Space 衝刺 · E 種植 · Q 修剪 · R 切換種子',
   'menu.touch': '觸控：左半拖曳移動 · 右側按鈕 種/剪/衝/換種',
@@ -183,8 +212,9 @@ const ZH: Record<StringKey, string> = {
   'diff.hard': '困難',
   'diff.nightmare': '惡夢',
   'story.1': '按 E 在腳下種下一朵惡意程式花。',
-  'story.2': '花朵會自動攻擊靠近的防毒無人機。',
-  'story.3': '按 Q 修剪最近的花，騰出花床。',
+  'story.2': '鄰接連花：蠕蟲藤連鎖、封包成群、緩速場強化鄰居。',
+  'story.3': '射擊會囤過熱——修剪可幫鄰居散熱，避免過熱沉默。',
+  'story.4': '種→衝→剪疊 Exploit。滿 5 層花園齊射爆發。',
   'story.next': 'Enter — 下一步',
   'story.skip': 'Esc — 跳過教學',
   pause: '暫停',
@@ -252,7 +282,21 @@ const ZH: Record<StringKey, string> = {
   'up.10.b': '解鎖緩速場光環花',
   'up.11.t': '散彈種子',
   'up.11.b': '解鎖散彈散射花',
+  'up.12.t': '連花增幅',
+  'up.12.b': '強化鄰接連花效果',
+  'up.13.t': '散熱根系',
+  'up.13.b': '過熱較慢；修剪多洩熱',
+  'up.14.t': 'Exploit 視窗',
+  'up.14.b': '延長 Exploit 連段時間',
+  'up.15.t': '菌落強化',
+  'up.15.b': '強化三朵同種菌落光環',
+  'up.16.t': '冷卻衝刺',
+  'up.16.b': '衝刺額外帶走花朵熱量',
+  'hud.exploit': 'Exploit',
+  'hud.heat': '過熱',
+  'tip.synergy': '連花 · 管過熱 · 追 Exploit',
 }
+
 
 const TABLES: Record<LocaleId, Record<StringKey, string>> = {
   en: EN,

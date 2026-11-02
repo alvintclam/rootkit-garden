@@ -1,8 +1,10 @@
 import {
   BASE_HP,
+  GRID_CELLS,
   MAX_ENEMIES,
   MAX_FLOWERS,
   MAX_PARTICLES,
+  MAX_PATCHES,
   MAX_PROJECTILES,
   W,
   H,
@@ -40,6 +42,13 @@ export type World = {
   flowerKind: Int8Array
   flowerCd: Int16Array
   flowerAlive: Uint8Array
+  flowerHeat: Float32Array
+  flowerHp: Float32Array
+  flowerMark: Int16Array
+  flowerSilence: Int16Array
+  flowerFlags: Uint8Array
+  flowerLinkA: Int8Array
+  flowerLinkB: Int8Array
   enemyCount: number
   enemyLive: number
   enemyX: Float32Array
@@ -48,6 +57,8 @@ export type World = {
   enemyKind: Int8Array
   enemyAlive: Uint8Array
   enemySlow: Int16Array
+  enemyTimer: Int16Array
+  enemyPhase: Float32Array
   enemyFree: Int16Array
   enemyFreeTop: number
   projCount: number
@@ -58,6 +69,8 @@ export type World = {
   projVy: Float32Array
   projDmg: Float32Array
   projAlive: Uint8Array
+  projBounce: Int8Array
+  projFlags: Uint8Array
   projFree: Int16Array
   projFreeTop: number
   partCount: number
@@ -70,6 +83,13 @@ export type World = {
   partAlive: Uint8Array
   partFree: Int16Array
   partFreeTop: number
+  patchAlive: Uint8Array
+  patchX: Float32Array
+  patchY: Float32Array
+  patchLife: Int16Array
+  gridMap: Int16Array
+  adjVisited: Uint8Array
+  adjStack: Int8Array
   spawnTimer: number
   wave: number
   cmdLog: InputCmd[]
@@ -85,12 +105,21 @@ export type World = {
   bossPulseCd: number
   bossPulseTele: number
   bossSlot: number
+  bossPurgeCd: number
+  bossPurged: number
   prevBits: number
   eggFlags: number
   pruneStreak: number
   konamiStep: number
+  exploitStacks: number
+  exploitTimer: number
+  exploitEmpower: number
+  recentPlant: number
+  recentDash: number
+  recentPrune: number
+  colonyXpCd: number
+  hitstop: number
 }
-
 
 export const ResultKey = {
   None: 0,
@@ -126,6 +155,13 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     flowerKind: new Int8Array(MAX_FLOWERS),
     flowerCd: new Int16Array(MAX_FLOWERS),
     flowerAlive: new Uint8Array(MAX_FLOWERS),
+    flowerHeat: new Float32Array(MAX_FLOWERS),
+    flowerHp: new Float32Array(MAX_FLOWERS),
+    flowerMark: new Int16Array(MAX_FLOWERS),
+    flowerSilence: new Int16Array(MAX_FLOWERS),
+    flowerFlags: new Uint8Array(MAX_FLOWERS),
+    flowerLinkA: new Int8Array(MAX_FLOWERS),
+    flowerLinkB: new Int8Array(MAX_FLOWERS),
     enemyCount: MAX_ENEMIES,
     enemyLive: 0,
     enemyX: new Float32Array(MAX_ENEMIES),
@@ -134,6 +170,8 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     enemyKind: new Int8Array(MAX_ENEMIES),
     enemyAlive: new Uint8Array(MAX_ENEMIES),
     enemySlow: new Int16Array(MAX_ENEMIES),
+    enemyTimer: new Int16Array(MAX_ENEMIES),
+    enemyPhase: new Float32Array(MAX_ENEMIES),
     enemyFree: new Int16Array(MAX_ENEMIES),
     enemyFreeTop: 0,
     projCount: MAX_PROJECTILES,
@@ -144,6 +182,8 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     projVy: new Float32Array(MAX_PROJECTILES),
     projDmg: new Float32Array(MAX_PROJECTILES),
     projAlive: new Uint8Array(MAX_PROJECTILES),
+    projBounce: new Int8Array(MAX_PROJECTILES),
+    projFlags: new Uint8Array(MAX_PROJECTILES),
     projFree: new Int16Array(MAX_PROJECTILES),
     projFreeTop: 0,
     partCount: MAX_PARTICLES,
@@ -156,6 +196,13 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     partAlive: new Uint8Array(MAX_PARTICLES),
     partFree: new Int16Array(MAX_PARTICLES),
     partFreeTop: 0,
+    patchAlive: new Uint8Array(MAX_PATCHES),
+    patchX: new Float32Array(MAX_PATCHES),
+    patchY: new Float32Array(MAX_PATCHES),
+    patchLife: new Int16Array(MAX_PATCHES),
+    gridMap: new Int16Array(GRID_CELLS),
+    adjVisited: new Uint8Array(MAX_FLOWERS),
+    adjStack: new Int8Array(MAX_FLOWERS),
     spawnTimer: diff.initialSpawnDelay,
     wave: 0,
     cmdLog: [],
@@ -171,10 +218,20 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     bossPulseCd: 0,
     bossPulseTele: 0,
     bossSlot: -1,
+    bossPurgeCd: 0,
+    bossPurged: 0,
     prevBits: 0,
     eggFlags: 0,
     pruneStreak: 0,
     konamiStep: 0,
+    exploitStacks: 0,
+    exploitTimer: 0,
+    exploitEmpower: 0,
+    recentPlant: 0,
+    recentDash: 0,
+    recentPrune: 0,
+    colonyXpCd: 0,
+    hitstop: 0,
   }
   resetAllPools(world)
   return world
@@ -204,7 +261,15 @@ export function resetRun(world: World, seed: number): void {
   world.levelChoices[2] = -1
   world.flowerCount = 0
   world.flowerAlive.fill(0)
+  world.flowerHeat.fill(0)
+  world.flowerHp.fill(0)
+  world.flowerMark.fill(0)
+  world.flowerSilence.fill(0)
+  world.flowerFlags.fill(0)
+  world.flowerLinkA.fill(-1)
+  world.flowerLinkB.fill(-1)
   resetAllPools(world)
+  world.patchAlive.fill(0)
   world.spawnTimer = diff.initialSpawnDelay
   world.wave = 0
   world.cmdLog = []
@@ -213,17 +278,30 @@ export function resetRun(world: World, seed: number): void {
   world.storyStep = 0
   world.inputFrames = []
   world.enemySlow.fill(0)
+  world.enemyTimer.fill(0)
+  world.enemyPhase.fill(0)
+  world.projBounce.fill(0)
+  world.projFlags.fill(0)
   world.bossSpawned = 0
   world.bossTeleLeft = 0
   world.bossPulseCd = 0
   world.bossPulseTele = 0
   world.bossSlot = -1
+  world.bossPurgeCd = 0
+  world.bossPurged = 0
   world.prevBits = 0
   world.eggFlags = 0
   world.pruneStreak = 0
   world.konamiStep = 0
+  world.exploitStacks = 0
+  world.exploitTimer = 0
+  world.exploitEmpower = 0
+  world.recentPlant = 0
+  world.recentDash = 0
+  world.recentPrune = 0
+  world.colonyXpCd = 0
+  world.hitstop = 0
 }
-
 
 export function countAliveEnemies(world: World): number {
   return world.enemyLive

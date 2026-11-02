@@ -7,4 +7,7 @@ export const SimEvent = {
   Die: 1 << 5,
   Win: 1 << 6,
   StoryAdvance: 1 << 7,
+  Synergy: 1 << 8,
+  Overheat: 1 << 9,
+  Exploit: 1 << 10,
 } as const

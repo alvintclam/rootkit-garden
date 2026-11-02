@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "check:size": "node scripts/check-size.mjs",
     "check:hot": "node scripts/check-hot.mjs",
-    "test": "tsx --test src/sim/rng.test.ts src/sim/replay.test.ts src/sim/state.test.ts src/sim/verify-replay.test.ts",
+    "test": "tsx --test src/sim/rng.test.ts src/sim/replay.test.ts src/sim/state.test.ts src/sim/verify-replay.test.ts src/sim/synergy.test.ts",
     "bot": "tsx scripts/bot.ts",
     "tune": "tsx scripts/bot.ts --runs 8 --seconds 45",
     "prebuild": "node scripts/pack-atlas.mjs",

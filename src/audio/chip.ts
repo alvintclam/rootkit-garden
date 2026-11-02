@@ -1,6 +1,6 @@
 import { SimEvent } from '../sim/events'
 
-type SfxKind = 'plant' | 'prune' | 'dash' | 'hit' | 'level' | 'die' | 'ui' | 'story' | 'fire'
+type SfxKind = 'plant' | 'prune' | 'dash' | 'hit' | 'level' | 'die' | 'ui' | 'story' | 'fire' | 'synergy' | 'overheat' | 'exploit'
 
 let ac: AudioContext | null = null
 let master: GainNode | null = null
@@ -221,6 +221,21 @@ export function beep(kind: SfxKind): void {
     freq = 392
     dur = 0.09
     type = 'triangle'
+  } else if (kind === 'synergy') {
+    freq = 620
+    dur = 0.05
+    type = 'triangle'
+    peak = 0.045
+  } else if (kind === 'overheat') {
+    freq = 140
+    type = 'sawtooth'
+    dur = 0.12
+    peak = 0.06
+  } else if (kind === 'exploit') {
+    freq = 440
+    dur = 0.18
+    type = 'square'
+    peak = 0.08
   } else {
     freq = 480
     dur = 0.045
@@ -234,6 +249,10 @@ export function beep(kind: SfxKind): void {
   if (kind === 'dash') o.frequency.exponentialRampToValueAtTime(360, t + dur)
   if (kind === 'die') o.frequency.exponentialRampToValueAtTime(40, t + dur)
   if (kind === 'plant') o.frequency.linearRampToValueAtTime(880, t + dur)
+  if (kind === 'exploit') {
+    o.frequency.linearRampToValueAtTime(660, t + dur * 0.4)
+    o.frequency.linearRampToValueAtTime(990, t + dur)
+  }
   g.gain.setValueAtTime(peak, t)
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
   o.start(t)
@@ -249,5 +268,8 @@ export function consumeSimEvents(events: number): void {
   if (events & SimEvent.Die) beep('die')
   if (events & SimEvent.Win) beep('ui')
   if (events & SimEvent.StoryAdvance) beep('story')
+  if (events & SimEvent.Synergy) beep('synergy')
+  if (events & SimEvent.Overheat) beep('overheat')
+  if (events & SimEvent.Exploit) beep('exploit')
 }
 
