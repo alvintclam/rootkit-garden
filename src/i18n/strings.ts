@@ -27,7 +27,12 @@ export type StringKey =
   | 'result.restart'
   | 'result.share'
   | 'result.verify'
+  | 'result.stats'
   | 'hud.controls'
+  | 'hud.wave'
+  | 'hud.seed'
+  | 'hud.kills'
+  | 'hud.time'
   | 'menu.touch'
   | 'touch.plant'
   | 'touch.prune'
@@ -49,6 +54,11 @@ export type StringKey =
   | 'biome.sentinel'
   | 'egg.seed'
   | 'egg.konami'
+  | 'share.empty'
+  | 'share.loadout'
+  | 'share.tag'
+  | 'share.footer'
+  | 'og.desc'
   | 'up.0.t'
   | 'up.0.b'
   | 'up.1.t'
@@ -102,7 +112,12 @@ const EN: Record<StringKey, string> = {
   'result.restart': 'Enter — restart with new seed',
   'result.share': 'C — download / copy share card',
   'result.verify': 'V — POST replay to localhost:8787/verify',
+  'result.stats': 'time {s}s · kills {k} · lv {l}',
   'hud.controls': 'WASD / left-stick  Space/dash btn  E/plant  Q/prune  Esc/pause',
+  'hud.wave': 'Wave',
+  'hud.seed': 'seed',
+  'hud.kills': 'kills',
+  'hud.time': 'time',
   'touch.plant': 'Plant',
   'touch.prune': 'Prune',
   'touch.dash': 'Dash',
@@ -123,6 +138,11 @@ const EN: Record<StringKey, string> = {
   'biome.sentinel': 'Biome: Sentinel inbound',
   'egg.seed': 'seed 1337 whispers…',
   'egg.konami': 'rootkit code accepted',
+  'share.empty': 'empty bed',
+  'share.loadout': 'loadout',
+  'share.tag': 'portrait',
+  'share.footer': 'portrait phone · share card',
+  'og.desc': 'Plant malware flowers. They shoot. Prune to reclaim. Survive. Portrait phone game.',
   'up.0.t': 'Wormvine Seed',
   'up.0.b': 'Unlock rapid Wormvine flowers',
   'up.1.t': 'Payload Seed',
@@ -177,7 +197,12 @@ const ZH: Record<StringKey, string> = {
   'result.restart': 'Enter — 用新種子重開',
   'result.share': 'C — 下載／複製分享圖',
   'result.verify': 'V — 上傳回放至 localhost:8787/verify',
+  'result.stats': '時間 {s}秒 · 擊殺 {k} · 等級 {l}',
   'hud.controls': 'WASD／左搖桿  Space／衝刺鈕  E／種植  Q／修剪  Esc／暫停',
+  'hud.wave': '波次',
+  'hud.seed': '種子',
+  'hud.kills': '擊殺',
+  'hud.time': '時間',
   'touch.plant': '種植',
   'touch.prune': '修剪',
   'touch.dash': '衝刺',
@@ -198,6 +223,11 @@ const ZH: Record<StringKey, string> = {
   'biome.sentinel': '生態：哨兵逼近',
   'egg.seed': '種子 1337 在低語…',
   'egg.konami': 'rootkit 密語已接受',
+  'share.empty': '空花床',
+  'share.loadout': '配置',
+  'share.tag': '直屏',
+  'share.footer': '直屏手遊 · 分享卡',
+  'og.desc': '種下惡意程式花。花會射擊。修剪回收空位。活下去。直屏手遊。',
   'up.0.t': '蠕蟲藤種子',
   'up.0.b': '解鎖快速蠕蟲藤',
   'up.1.t': '酬載種子',
@@ -229,18 +259,63 @@ const TABLES: Record<LocaleId, Record<StringKey, string>> = {
   'zh-Hant': ZH,
 }
 
-const ORDER: LocaleId[] = ['en', 'zh-Hant']
+const ORDER: LocaleId[] = ['zh-Hant', 'en']
 
-let locale: LocaleId = 'en'
+/** Product default: Traditional Chinese (HK Cantonese UI preference). */
+let locale: LocaleId = 'zh-Hant'
 
+function syncDocumentLang(id: LocaleId): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = id === 'zh-Hant' ? 'zh-Hant' : 'en'
+  const desc = t('og.desc')
+  const metaDesc = document.querySelector('meta[name="description"]') as HTMLMetaElement | null
+  if (metaDesc) metaDesc.content = desc
+  const ogDesc = document.querySelector('meta[property="og:description"]') as HTMLMetaElement | null
+  if (ogDesc) ogDesc.content = desc
+  const ogTitle = document.querySelector('meta[property="og:title"]') as HTMLMetaElement | null
+  if (ogTitle && !ogTitle.content.includes('seed')) {
+    ogTitle.content = `${t('title')} · ${id === 'zh-Hant' ? 'Rootkit Garden' : t('subtitle')}`
+  }
+  if (!document.title.includes('seed')) {
+    document.title = `${t('title')} · ${id === 'zh-Hant' ? 'Rootkit Garden' : '惡意程式花園'}`
+  }
+}
+
+/**
+ * Prefer zh-Hant for zh-HK / zh-TW / zh-Hant / any zh*.
+ * Prefer en for clear English tags. Otherwise product default zh-Hant.
+ */
 export function detectLocale(tag?: string): LocaleId {
-  const raw = (tag || (typeof navigator !== 'undefined' ? navigator.language : 'en')).toLowerCase()
-  if (raw.startsWith('zh')) return 'zh-Hant'
-  return 'en'
+  const candidates: string[] = []
+  if (tag) candidates.push(tag)
+  else if (typeof navigator !== 'undefined') {
+    if (navigator.language) candidates.push(navigator.language)
+    const langs = navigator.languages
+    if (langs) for (let i = 0; i < langs.length; i++) candidates.push(langs[i])
+  }
+  let sawEn = false
+  for (let i = 0; i < candidates.length; i++) {
+    const raw = (candidates[i] || '').toLowerCase()
+    if (!raw) continue
+    if (
+      raw.startsWith('zh-hk') ||
+      raw.startsWith('zh-tw') ||
+      raw.startsWith('zh-hant') ||
+      raw.startsWith('zh-mo') ||
+      raw === 'zh' ||
+      raw.startsWith('zh-')
+    ) {
+      return 'zh-Hant'
+    }
+    if (raw.startsWith('en')) sawEn = true
+  }
+  if (sawEn) return 'en'
+  return 'zh-Hant'
 }
 
 export function setLocale(id: LocaleId): void {
   locale = id
+  syncDocumentLang(id)
 }
 
 export function getLocale(): LocaleId {
@@ -250,11 +325,20 @@ export function getLocale(): LocaleId {
 export function cycleLocale(): LocaleId {
   const i = ORDER.indexOf(locale)
   locale = ORDER[(i + 1) % ORDER.length]
+  syncDocumentLang(locale)
   return locale
 }
 
 export function t(key: StringKey): string {
   return TABLES[locale][key] || TABLES.en[key] || key
+}
+
+export function tf(key: StringKey, vars: Record<string, string | number>): string {
+  let s = t(key)
+  for (const k of Object.keys(vars)) {
+    s = s.split('{' + k + '}').join(String(vars[k]))
+  }
+  return s
 }
 
 export function upgradeTitle(id: number): string {
@@ -278,4 +362,23 @@ export function biomeLabel(tier: number): string {
   if (tier === 2) return t('biome.siege')
   if (tier === 1) return t('biome.stir')
   return t('biome.calm')
+}
+
+export function diffName(id: number): string {
+  if (id === 0) return t('diff.easy')
+  if (id === 2) return t('diff.hard')
+  if (id === 3) return t('diff.nightmare')
+  return t('diff.normal')
+}
+
+/** Assert EN/ZH key parity (dev / build-time helper). */
+export function assertLocaleParity(): string[] {
+  const missing: string[] = []
+  for (const k of Object.keys(EN) as StringKey[]) {
+    if (!ZH[k]) missing.push('zh-Hant:' + k)
+  }
+  for (const k of Object.keys(ZH) as StringKey[]) {
+    if (!EN[k]) missing.push('en:' + k)
+  }
+  return missing
 }

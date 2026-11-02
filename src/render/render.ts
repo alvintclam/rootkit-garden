@@ -6,7 +6,7 @@ import type { World } from '../sim/world'
 import { ResultKey } from '../sim/world'
 import { Difficulty } from '../sim/difficulty'
 import { drawEnemy, drawFlower, drawPlayer, drawProjectile } from './sprites'
-import { biomeLabel, flowerName, getLocale, t, upgradeBlurb, upgradeTitle } from '../i18n/strings'
+import { biomeLabel, flowerName, getLocale, t, tf, upgradeBlurb, upgradeTitle } from '../i18n/strings'
 import { isTouchUi, joyOrigin, touchBtnRect } from '../input/input'
 
 function pressureTier(world: World): number {
@@ -69,7 +69,7 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.font = '13px ui-monospace, monospace'
   ctx.fillText(`HP ${Math.ceil(world.playerHp)}/${world.playerMaxHp}`, 16, 28)
   ctx.fillText(`LV ${world.level}  XP ${world.xp}/${world.xpToNext}`, 16, 46)
-  ctx.fillText(`Wave ${world.wave}  t-${sec}s`, 16, 64)
+  ctx.fillText(`${t('hud.wave')} ${world.wave}  t-${sec}s`, 16, 64)
   ctx.fillStyle = tier >= 2 ? '#ffb347' : '#9ad5a8'
   ctx.fillText(biomeLabel(tier), 16, 82)
   const def = FLOWER_DEFS[world.plantKind]
@@ -77,7 +77,7 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.textAlign = 'right'
   ctx.fillText(`${flowerName(world.plantKind)}  ${countFlowers(world)}/${world.upgrades.maxFlowers}`, W - 16, 28)
   ctx.fillStyle = '#9ad5a8'
-  ctx.fillText(`seed ${world.seed}`, W - 16, 46)
+  ctx.fillText(`${t('hud.seed')} ${world.seed}`, W - 16, 46)
   ctx.fillText(`${t('menu.diff')}: ${diffLabel(world)}`, W - 16, 64)
   if (world.eggFlags & 2) {
     ctx.fillStyle = '#ff6ad5'
@@ -302,8 +302,12 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
       world.resultKey === ResultKey.Survived ? t('result.survived') : t('result.wiped')
     overlay(ctx, world.survived ? t('result.win') : t('result.lose'), [
       reason,
-      `seed ${world.seed}`,
-      `time ${(world.tick / 60).toFixed(1)}s · kills ${world.killCount} · lv ${world.level}`,
+      `${t('hud.seed')} ${world.seed}`,
+      tf('result.stats', {
+        s: (world.tick / 60).toFixed(1),
+        k: world.killCount,
+        l: world.level,
+      }),
       `${t('menu.diff')}: ${diffLabel(world)}`,
       '',
       t('result.share'),
@@ -322,18 +326,20 @@ function wrapText(
   maxWidth: number,
   lineHeight: number,
 ): void {
-  const words = text.split(' ')
+  // Space-split for Latin; character-split for CJK (no spaces).
+  const units = /[\u3400-\u9fff\uf900-\ufaff]/.test(text) ? Array.from(text) : text.split(' ')
+  const joiner = units.length && units[0].length === 1 && !text.includes(' ') ? '' : ' '
   let line = ''
   let yy = y
-  for (let n = 0; n < words.length; n++) {
-    const test = line + words[n] + ' '
-    if (ctx.measureText(test).width > maxWidth && n > 0) {
+  for (let n = 0; n < units.length; n++) {
+    const test = line ? line + joiner + units[n] : units[n]
+    if (ctx.measureText(test).width > maxWidth && line) {
       ctx.fillText(line, x, yy)
-      line = words[n] + ' '
+      line = units[n]
       yy += lineHeight
     } else {
       line = test
     }
   }
-  ctx.fillText(line, x, yy)
+  if (line) ctx.fillText(line, x, yy)
 }

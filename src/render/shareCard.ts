@@ -1,7 +1,6 @@
-import { difficultyName } from '../sim/difficulty'
 import { MAX_FLOWERS } from '../sim/constants'
 import type { World } from '../sim/world'
-import { flowerName } from '../i18n/strings'
+import { diffName, flowerName, getLocale, t } from '../i18n/strings'
 
 export type ShareStats = {
   seed: number
@@ -30,8 +29,8 @@ export function collectShareStats(world: World): ShareStats {
     kills: world.killCount,
     level: world.level,
     survived: world.survived,
-    difficulty: difficultyName(world.difficulty),
-    flowers: parts.length ? parts.join(' · ') : 'empty bed',
+    difficulty: diffName(world.difficulty),
+    flowers: parts.length ? parts.join(' · ') : t('share.empty'),
   }
 }
 
@@ -48,28 +47,29 @@ export function drawShareCard(stats: ShareStats): HTMLCanvasElement {
   ctx.strokeStyle = '#1f6b3a'
   ctx.lineWidth = 6
   ctx.strokeRect(24, 24, CW - 48, CH - 48)
+  const zh = getLocale() === 'zh-Hant'
   ctx.fillStyle = '#7CFFB2'
   ctx.font = 'bold 48px ui-monospace, monospace'
-  ctx.fillText('Rootkit Garden', 56, 120)
+  ctx.fillText(zh ? t('title') : 'Rootkit Garden', 56, 120)
   ctx.fillStyle = '#9ad5a8'
   ctx.font = '24px ui-monospace, monospace'
-  ctx.fillText('惡意程式花園 · portrait', 56, 170)
+  ctx.fillText(zh ? `Rootkit Garden · ${t('share.tag')}` : `惡意程式花園 · ${t('share.tag')}`, 56, 170)
   ctx.fillStyle = '#9ad5a8'
   ctx.font = '28px ui-monospace, monospace'
-  ctx.fillText(stats.survived ? 'Garden Holds' : 'Scan Complete', 56, 260)
+  ctx.fillText(stats.survived ? t('result.win') : t('result.lose'), 56, 260)
   ctx.fillStyle = '#c8facc'
   ctx.font = '28px ui-monospace, monospace'
   const lines = [
-    `seed ${stats.seed}`,
-    `${stats.seconds}s · kills ${stats.kills} · lv ${stats.level}`,
-    `difficulty ${stats.difficulty}`,
-    `loadout`,
+    `${t('hud.seed')} ${stats.seed}`,
+    `${stats.seconds}s · ${t('hud.kills')} ${stats.kills} · lv ${stats.level}`,
+    `${t('menu.diff')} ${stats.difficulty}`,
+    t('share.loadout'),
     stats.flowers,
   ]
   for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], 56, 360 + i * 56)
   ctx.fillStyle = '#3dff9a'
   ctx.font = '22px ui-monospace, monospace'
-  ctx.fillText('直屏手遊 · share card', 56, CH - 80)
+  ctx.fillText(t('share.footer'), 56, CH - 80)
   return c
 }
 
@@ -89,7 +89,7 @@ export async function downloadShareCard(stats: ShareStats): Promise<void> {
   } catch {
     try {
       await navigator.clipboard.writeText(
-        `Rootkit Garden | seed ${stats.seed} | ${stats.seconds}s | kills ${stats.kills} | ${stats.difficulty}`,
+        `${t('title')} | ${t('hud.seed')} ${stats.seed} | ${stats.seconds}s | ${t('hud.kills')} ${stats.kills} | ${stats.difficulty}`,
       )
     } catch {
       /* ignore */
@@ -98,7 +98,7 @@ export async function downloadShareCard(stats: ShareStats): Promise<void> {
 }
 
 export function applyOgMeta(stats: ShareStats): void {
-  const title = `Rootkit Garden — seed ${stats.seed} · ${stats.seconds}s · ${stats.kills} kills`
+  const title = `${t('title')} — ${t('hud.seed')} ${stats.seed} · ${stats.seconds}s · ${stats.kills} ${t('hud.kills')}`
   document.title = title
   let og = document.querySelector('meta[property="og:title"]') as HTMLMetaElement | null
   if (!og) {
