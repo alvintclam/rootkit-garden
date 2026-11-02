@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Click the canvas for keyboard focus.
+Portrait (540×960) mobile web game. Tap/click the canvas for focus.
 
 ```bash
 npm run build
@@ -46,17 +46,18 @@ npm run tla:check
 | Input | Action |
 | --- | --- |
 | WASD / arrows | Move |
-| Space | Dash |
-| E / left click | Plant |
-| Q | Prune |
-| R / Tab | Cycle seed |
-| 1 / 2 / 3 | Level-up pick |
-| Esc / P | Pause / skip story |
-| Enter | Start / next / restart |
-| L | Language `en` ↔ `zh-Hant` |
-| `[` / `-` | Difficulty Easy → Normal → Hard → Nightmare |
+| **Touch left-half drag** | Virtual stick → move |
+| Space / **Dash**|| btn** | Dash |
+| E / left click / **Plant**|| btn** | Plant |
+| Q / **Prune**|| btn** | Prune |
+| R / Tab / **Seed**|| btn** | Cycle seed |
+| 1 / 2 / 3 / **card tap** | Level-up pick |
+| Esc / P / **|| btn** | Pause / skip story |
+| Enter / **confirm tap** | Start / next / restart |
+| L / **Lang**|| btn** | Language `en` ↔ `zh-Hant` |
+| `[` / `-` / **Diff**|| btn** | Difficulty Easy → Normal → Hard → Nightmare |
 | F | Toggle FPS / live counts |
-| C | Result: download share PNG |
+| C | Result: download share PNG (720×1280) |
 | V | Result: POST replay to `http://127.0.0.1:8787/verify` |
 
 ## Perf (mobile 60fps proxy)
@@ -110,13 +111,15 @@ Spec `spec/garden_phases.tla` matches `PHASE_EDGE_NAMES`; Node tests enforce 1:1
 
 ## Measured size
 
-**First-download gzip (content polish): ~15.06 KB** (budget 150 KB).
+**First-download gzip (portrait + touch): ~16.94 KB** (budget 150 KB).
 
 | Asset | gzip |
 | --- | --- |
-| `dist/index.html` | ~639 B |
-| entry JS | ~14418 B |
-| **total** | **~15057 B** |
+| `dist/index.html` | ~975 B |
+| entry JS | ~15967 B |
+| **total** | **~16942 B** |
+
+Resolution **540×960** (9:16). Re-run `npm run build && npm run check:size` after changes.
 
 
 Re-run `npm run build && npm run check:size` after changes.

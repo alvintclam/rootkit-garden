@@ -28,6 +28,16 @@ export type StringKey =
   | 'result.share'
   | 'result.verify'
   | 'hud.controls'
+  | 'menu.touch'
+  | 'touch.plant'
+  | 'touch.prune'
+  | 'touch.dash'
+  | 'touch.cycle'
+  | 'touch.pause'
+  | 'touch.move'
+  | 'touch.confirm'
+  | 'touch.lang'
+  | 'touch.diff'
   | 'flower.packet'
   | 'flower.wormvine'
   | 'flower.payload'
@@ -70,6 +80,7 @@ const EN: Record<StringKey, string> = {
   'menu.tip': 'Plant flowers. They shoot. Prune to reclaim. Survive.',
   'menu.start': 'Enter — start   L — language   [ — difficulty',
   'menu.controls': 'WASD move · Space dash · E plant · Q prune · R cycle seed',
+  'menu.touch': 'Touch: left drag move · right buttons plant/prune/dash/cycle',
   'menu.lang': 'Language',
   'menu.diff': 'Difficulty',
   'diff.easy': 'Easy',
@@ -91,7 +102,16 @@ const EN: Record<StringKey, string> = {
   'result.restart': 'Enter — restart with new seed',
   'result.share': 'C — download / copy share card',
   'result.verify': 'V — POST replay to localhost:8787/verify',
-  'hud.controls': 'WASD move  Space dash  E/click plant  Q prune  Esc pause',
+  'hud.controls': 'WASD / left-stick  Space/dash btn  E/plant  Q/prune  Esc/pause',
+  'touch.plant': 'Plant',
+  'touch.prune': 'Prune',
+  'touch.dash': 'Dash',
+  'touch.cycle': 'Seed',
+  'touch.pause': '||',
+  'touch.move': 'MOVE',
+  'touch.confirm': 'Tap / Enter',
+  'touch.lang': 'Lang',
+  'touch.diff': 'Diff',
   'flower.packet': 'Packet Bloom',
   'flower.wormvine': 'Wormvine',
   'flower.payload': 'Payload Bloom',
@@ -135,6 +155,7 @@ const ZH: Record<StringKey, string> = {
   'menu.tip': '種花。花會射擊。修剪回收空位。活下去。',
   'menu.start': 'Enter 開始   L 語言   [ 難度',
   'menu.controls': 'WASD 移動 · Space 衝刺 · E 種植 · Q 修剪 · R 切換種子',
+  'menu.touch': '觸控：左半拖曳移動 · 右側按鈕 種/剪/衝/換種',
   'menu.lang': '語言',
   'menu.diff': '難度',
   'diff.easy': '簡單',
@@ -156,7 +177,16 @@ const ZH: Record<StringKey, string> = {
   'result.restart': 'Enter — 用新種子重開',
   'result.share': 'C — 下載／複製分享圖',
   'result.verify': 'V — 上傳回放至 localhost:8787/verify',
-  'hud.controls': 'WASD 移動  Space 衝刺  E/點擊 種植  Q 修剪  Esc 暫停',
+  'hud.controls': 'WASD／左搖桿  Space／衝刺鈕  E／種植  Q／修剪  Esc／暫停',
+  'touch.plant': '種植',
+  'touch.prune': '修剪',
+  'touch.dash': '衝刺',
+  'touch.cycle': '換種',
+  'touch.pause': '||',
+  'touch.move': '移動',
+  'touch.confirm': '點擊／Enter',
+  'touch.lang': '語言',
+  'touch.diff': '難度',
   'flower.packet': '封包花',
   'flower.wormvine': '蠕蟲藤',
   'flower.payload': '酬載花',

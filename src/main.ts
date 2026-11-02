@@ -16,6 +16,7 @@ if (!ctx) throw new Error('canvas')
 
 canvas.focus()
 bindInput(canvas)
+canvas.addEventListener('contextmenu', (e) => e.preventDefault())
 setLocale(detectLocale())
 
 const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0 || 1

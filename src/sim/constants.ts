@@ -1,5 +1,5 @@
-export const W = 960
-export const H = 540
+export const W = 540
+export const H = 960
 export const TICK_HZ = 60
 export const DT = 1 / TICK_HZ
 export const MAX_FLOWERS = 32
