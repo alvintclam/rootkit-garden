@@ -4,8 +4,10 @@ import {
   MAX_ENEMIES,
   MAX_FLOWERS,
   MAX_PARTICLES,
+  MAX_FLOATS,
   MAX_PATCHES,
   MAX_PROJECTILES,
+  MAX_TRAIL,
   W,
   H,
 } from './constants'
@@ -119,6 +121,42 @@ export type World = {
   recentPrune: number
   colonyXpCd: number
   hitstop: number
+  killStreak: number
+  killStreakTimer: number
+  shakeLeft: number
+  shakeMag: number
+  zoomPunch: number
+  flashLeft: number
+  calloutId: number
+  calloutLife: number
+  plantFlashX: number
+  plantFlashY: number
+  plantFlashLife: number
+  pruneFlashX: number
+  pruneFlashY: number
+  pruneFlashLife: number
+  linkSparkLife: number
+  linkSparkX0: number
+  linkSparkY0: number
+  linkSparkX1: number
+  linkSparkY1: number
+  exploitPipFlash: number
+  levelSnap: number
+  linkCount: number
+  deathPopX: number
+  deathPopY: number
+  deathPopLife: number
+  partKind: Uint8Array
+  floatAlive: Uint8Array
+  floatX: Float32Array
+  floatY: Float32Array
+  floatVy: Float32Array
+  floatVal: Float32Array
+  floatLife: Int16Array
+  floatBig: Uint8Array
+  trailX: Float32Array
+  trailY: Float32Array
+  trailLife: Int16Array
 }
 
 export const ResultKey = {
@@ -232,6 +270,42 @@ export function createWorld(seed: number, difficulty: DifficultyId = Difficulty.
     recentPrune: 0,
     colonyXpCd: 0,
     hitstop: 0,
+    killStreak: 0,
+    killStreakTimer: 0,
+    shakeLeft: 0,
+    shakeMag: 0,
+    zoomPunch: 0,
+    flashLeft: 0,
+    calloutId: 0,
+    calloutLife: 0,
+    plantFlashX: 0,
+    plantFlashY: 0,
+    plantFlashLife: 0,
+    pruneFlashX: 0,
+    pruneFlashY: 0,
+    pruneFlashLife: 0,
+    linkSparkLife: 0,
+    linkSparkX0: 0,
+    linkSparkY0: 0,
+    linkSparkX1: 0,
+    linkSparkY1: 0,
+    exploitPipFlash: 0,
+    levelSnap: 0,
+    linkCount: 0,
+    deathPopX: 0,
+    deathPopY: 0,
+    deathPopLife: 0,
+    partKind: new Uint8Array(MAX_PARTICLES),
+    floatAlive: new Uint8Array(MAX_FLOATS),
+    floatX: new Float32Array(MAX_FLOATS),
+    floatY: new Float32Array(MAX_FLOATS),
+    floatVy: new Float32Array(MAX_FLOATS),
+    floatVal: new Float32Array(MAX_FLOATS),
+    floatLife: new Int16Array(MAX_FLOATS),
+    floatBig: new Uint8Array(MAX_FLOATS),
+    trailX: new Float32Array(MAX_TRAIL),
+    trailY: new Float32Array(MAX_TRAIL),
+    trailLife: new Int16Array(MAX_TRAIL),
   }
   resetAllPools(world)
   return world
@@ -301,6 +375,24 @@ export function resetRun(world: World, seed: number): void {
   world.recentPrune = 0
   world.colonyXpCd = 0
   world.hitstop = 0
+  world.killStreak = 0
+  world.killStreakTimer = 0
+  world.shakeLeft = 0
+  world.shakeMag = 0
+  world.zoomPunch = 0
+  world.flashLeft = 0
+  world.calloutId = 0
+  world.calloutLife = 0
+  world.plantFlashLife = 0
+  world.pruneFlashLife = 0
+  world.linkSparkLife = 0
+  world.exploitPipFlash = 0
+  world.levelSnap = 0
+  world.linkCount = 0
+  world.deathPopLife = 0
+  world.partKind.fill(0)
+  world.floatAlive.fill(0)
+  world.trailLife.fill(0)
 }
 
 export function countAliveEnemies(world: World): number {

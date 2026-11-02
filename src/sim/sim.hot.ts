@@ -32,17 +32,29 @@ import {
   HEAT_PER_FIRE,
   HEAT_PRUNE_DUMP,
   HEAT_SILENCE,
+  KILL_STREAK_WINDOW,
   MAX_ENEMIES,
+  MAX_FLOATS,
   MAX_FLOWERS,
   MAX_PARTICLES,
   MAX_PATCHES,
   MAX_PROJECTILES,
+  MAX_TRAIL,
+  PART_BLOOM,
+  PART_DEATH,
+  PART_DEBRIS,
+  PART_SPARK,
+  PART_VENT,
   PATCH_LIFE,
   PATCH_RADIUS,
   PF_SPIKE,
   PF_SPIKE_USED,
   PLANT_GRID,
   PLAYER_RADIUS,
+  CALL_EXPLOIT,
+  CALL_LINK,
+  CALL_PENTA,
+  CALL_TRIPLE,
   SCAN_CD,
   SCAN_HALF_ANGLE,
   SCAN_MARK,
@@ -187,32 +199,110 @@ function gainXp(world: World, amount: number): void {
     world.level += 1
     world.xpToNext = Math.floor(XP_BASE * Math.pow(XP_GROWTH, world.level - 1))
     rollUpgradeChoices(world.rng, world.upgrades, world.levelChoices)
-    if (setPhase(world, Phase.LevelUp)) world.events |= SimEvent.LevelUp
+    if (setPhase(world, Phase.LevelUp)) {
+      world.events |= SimEvent.LevelUp
+      world.levelSnap = 1
+      world.flashLeft = 6
+      bumpShake(world, 6, 2.5)
+    }
   }
 }
 
-function spawnHitBurst(world: World, x: number, y: number): void {
-  for (let k = 0; k < 4; k++) {
+function spawnParts(
+  world: World,
+  x: number,
+  y: number,
+  n: number,
+  kind: number,
+  speedLo: number,
+  speedHi: number,
+  lifeLo: number,
+  lifeHi: number,
+): void {
+  for (let k = 0; k < n; k++) {
     const slot = acquirePart(world)
     if (slot < 0) return
     const a = nextFloat(world.rng) * 6.283185307179586
-    const sp = 1.2 + nextFloat(world.rng) * 2.4
+    const sp = speedLo + nextFloat(world.rng) * (speedHi - speedLo)
     world.partAlive[slot] = 1
+    world.partKind[slot] = kind
     world.partX[slot] = x
     world.partY[slot] = y
     world.partVx[slot] = Math.cos(a) * sp
     world.partVy[slot] = Math.sin(a) * sp
-    world.partLife[slot] = 12 + nextInt(world.rng, 0, 10)
+    world.partLife[slot] = lifeLo + nextInt(world.rng, 0, lifeHi - lifeLo + 1)
   }
 }
 
+function spawnHitBurst(world: World, x: number, y: number): void {
+  spawnParts(world, x, y, 4, PART_DEBRIS, 1.2, 3.6, 12, 22)
+}
+
+function spawnDeathPop(world: World, x: number, y: number): void {
+  spawnParts(world, x, y, 10, PART_DEATH, 1.8, 5.2, 14, 28)
+  spawnParts(world, x, y, 6, PART_DEBRIS, 0.8, 2.8, 10, 18)
+  world.deathPopX = x
+  world.deathPopY = y
+  world.deathPopLife = 14
+}
+
+function spawnFloat(world: World, x: number, y: number, val: number, big: number): void {
+  for (let i = 0; i < MAX_FLOATS; i++) {
+    if (world.floatAlive[i]) continue
+    world.floatAlive[i] = 1
+    world.floatX[i] = x + (nextFloat(world.rng) - 0.5) * 10
+    world.floatY[i] = y - 6
+    world.floatVy[i] = -1.1 - nextFloat(world.rng) * 0.6
+    world.floatVal[i] = val
+    world.floatLife[i] = big ? 42 : 28
+    world.floatBig[i] = big
+    return
+  }
+}
+
+function bumpShake(world: World, frames: number, mag: number): void {
+  if (frames > world.shakeLeft) world.shakeLeft = frames
+  if (mag > world.shakeMag) world.shakeMag = mag
+}
+
+function setCallout(world: World, id: number, life: number): void {
+  world.calloutId = id
+  world.calloutLife = life
+}
+
 function killEnemy(world: World, e: number): void {
-  spawnHitBurst(world, world.enemyX[e], world.enemyY[e])
+  const x = world.enemyX[e]
+  const y = world.enemyY[e]
+  spawnDeathPop(world, x, y)
   if (world.bossSlot === e) world.bossSlot = -1
   const kind = world.enemyKind[e]
   releaseEnemy(world, e)
   world.killCount++
   world.events |= SimEvent.Kill
+
+  // Kill streak window
+  if (world.killStreakTimer > 0) world.killStreak++
+  else world.killStreak = 1
+  world.killStreakTimer = KILL_STREAK_WINDOW
+
+  let stop = 2
+  if (world.killStreak >= 5) {
+    stop = 7
+    bumpShake(world, 10, 5)
+    setCallout(world, CALL_PENTA, 55)
+    world.events |= SimEvent.MultiKill
+    gainXp(world, 3)
+    addExploit(world)
+  } else if (world.killStreak >= 3) {
+    stop = 5
+    bumpShake(world, 7, 3.5)
+    setCallout(world, CALL_TRIPLE, 48)
+    world.events |= SimEvent.MultiKill
+    gainXp(world, 2)
+  } else {
+    bumpShake(world, 4, 1.8)
+  }
+  if (stop > world.hitstop) world.hitstop = stop
   gainXp(world, ENEMY_DEFS[kind].xp)
 }
 
@@ -239,6 +329,8 @@ function spawnPatch(world: World, x: number, y: number): void {
 function addExploit(world: World): void {
   if (world.exploitStacks >= EXPLOIT_CAP) return
   world.exploitStacks++
+  world.exploitPipFlash = 16
+  world.events |= SimEvent.ExploitStack
   const win = Math.floor(EXPLOIT_WINDOW * world.upgrades.exploitWindowMul)
   world.exploitTimer = win
   if (world.exploitStacks >= EXPLOIT_CAP) {
@@ -251,7 +343,12 @@ function fireExploitBurst(world: World): void {
   world.exploitTimer = 0
   world.exploitEmpower = EXPLOIT_EMPOWER
   world.events |= SimEvent.Exploit
-  world.hitstop = 4
+  world.hitstop = 8
+  bumpShake(world, 14, 7)
+  world.flashLeft = 10
+  world.zoomPunch = 12
+  setCallout(world, CALL_EXPLOIT, 50)
+  spawnParts(world, world.playerX, world.playerY, 16, PART_SPARK, 2, 6, 16, 30)
   let dmgMul = world.upgrades.damageMul * 1.35
   if (world.eggFlags & EGG_KONAMI) dmgMul *= 1.08
   for (let i = 0; i < MAX_FLOWERS; i++) {
@@ -428,8 +525,43 @@ function rebuildAdjacency(world: World): void {
     }
   }
 
+  // count active links
+  let links = 0
+  for (let i = 0; i < MAX_FLOWERS; i++) {
+    if (!world.flowerAlive[i]) continue
+    if (world.flowerLinkA[i] >= 0) links++
+  }
+  if (links > world.linkCount) {
+    // new link formed — spark along first new pair
+    for (let i = 0; i < MAX_FLOWERS; i++) {
+      if (!world.flowerAlive[i]) continue
+      const a = world.flowerLinkA[i]
+      if (a < 0) continue
+      world.linkSparkX0 = world.flowerX[i]
+      world.linkSparkY0 = world.flowerY[i]
+      world.linkSparkX1 = world.flowerX[a]
+      world.linkSparkY1 = world.flowerY[a]
+      world.linkSparkLife = 22
+      spawnParts(
+        world,
+        (world.flowerX[i] + world.flowerX[a]) * 0.5,
+        (world.flowerY[i] + world.flowerY[a]) * 0.5,
+        6,
+        PART_SPARK,
+        0.8,
+        2.6,
+        10,
+        18,
+      )
+      world.events |= SimEvent.SynergyForm
+      if (world.hitstop < 3) world.hitstop = 3
+      bumpShake(world, 4, 2)
+      setCallout(world, CALL_LINK, 36)
+      break
+    }
+  }
+  world.linkCount = links
   if (synProc) {
-    // subtle: only pulse event occasionally to avoid SFX spam
     if ((world.tick & 31) === 0) world.events |= SimEvent.Synergy
   }
 }
@@ -518,6 +650,12 @@ function tryPlant(world: World): void {
   if (slot >= world.flowerCount) world.flowerCount = slot + 1
   world.pruneStreak = 0
   world.events |= SimEvent.Plant
+  world.plantFlashX = gx
+  world.plantFlashY = gy
+  world.plantFlashLife = 16
+  spawnParts(world, gx, gy, 8, PART_BLOOM, 0.6, 2.4, 10, 18)
+  bumpShake(world, 3, 1.2)
+  if (world.hitstop < 1) world.hitstop = 1
   // Exploit: plant after dash/prune, or plant that creates adjacency
   if (world.recentDash > 0 || world.recentPrune > 0 || adj) addExploit(world)
   world.recentPlant = Math.floor(EXPLOIT_WINDOW * world.upgrades.exploitWindowMul)
@@ -528,7 +666,15 @@ function tryPrune(world: World): void {
   const i = nearestFlower(world, world.playerX, world.playerY)
   if (i < 0) return
   if (dist2(world.playerX, world.playerY, world.flowerX[i], world.flowerY[i]) > 48 * 48) return
+  const px = world.flowerX[i]
+  const py = world.flowerY[i]
   world.flowerAlive[i] = 0
+  world.pruneFlashX = px
+  world.pruneFlashY = py
+  world.pruneFlashLife = 14
+  spawnParts(world, px, py, 12, PART_VENT, 1.2, 4.2, 12, 22)
+  bumpShake(world, 4, 2)
+  if (world.hitstop < 3) world.hitstop = 3
   // Dump heat from neighbors
   const dump = HEAT_PRUNE_DUMP * world.upgrades.pruneDumpMul
   for (let n = 0; n < MAX_FLOWERS; n++) {
@@ -620,6 +766,16 @@ function tickPlayer(world: World, bits: number): void {
     world.dashLeft = DASH_FRAMES
     world.dashCd = Math.floor(DASH_COOLDOWN * world.upgrades.dashCooldownMul)
     world.events |= SimEvent.Dash
+    bumpShake(world, 3, 1.5)
+    if (world.hitstop < 1) world.hitstop = 1
+    // seed trail
+    for (let ti = 0; ti < MAX_TRAIL; ti++) {
+      if (world.trailLife[ti] > 0) continue
+      world.trailX[ti] = world.playerX
+      world.trailY[ti] = world.playerY
+      world.trailLife[ti] = 10
+      break
+    }
     if (world.recentPlant > 0 || world.recentPrune > 0) addExploit(world)
     world.recentDash = Math.floor(EXPLOIT_WINDOW * world.upgrades.exploitWindowMul)
   }
@@ -635,6 +791,15 @@ function tickPlayer(world: World, bits: number): void {
       if (!world.flowerAlive[f]) continue
       if (dist2(world.playerX, world.playerY, world.flowerX[f], world.flowerY[f]) <= 36 * 36) {
         world.flowerHeat[f] = clamp(world.flowerHeat[f] - vent * 0.15, 0, HEAT_MAX)
+      }
+    }
+    if ((world.dashLeft & 1) === 0) {
+      for (let ti = 0; ti < MAX_TRAIL; ti++) {
+        if (world.trailLife[ti] > 0) continue
+        world.trailX[ti] = world.playerX
+        world.trailY[ti] = world.playerY
+        world.trailLife[ti] = 12
+        break
       }
     }
     world.dashLeft--
@@ -739,6 +904,9 @@ function tickFlowers(world: World): void {
       world.flowerSilence[i] = 24
       world.flowerHp[i] -= 4
       world.events |= SimEvent.Overheat
+      world.flashLeft = Math.max(world.flashLeft, 4)
+      bumpShake(world, 5, 2.5)
+      spawnParts(world, world.flowerX[i], world.flowerY[i], 5, PART_VENT, 1, 3, 8, 14)
       if (world.flowerHp[i] <= 0) {
         world.flowerAlive[i] = 0
         rebuildAdjacency(world)
@@ -857,8 +1025,13 @@ function tickProjectiles(world: World): void {
           dmg *= 1.55
           world.projFlags[i] |= PF_SPIKE_USED
         }
-        // Marked flowers' targets already handled; marked flowers take extra when hit by enemies — here enemies take normal proj dmg
         world.enemyHp[e] -= dmg
+        const big = dmg >= 18 ? 1 : 0
+        spawnFloat(world, world.enemyX[e], world.enemyY[e], dmg, big)
+        if (big) {
+          spawnParts(world, world.enemyX[e], world.enemyY[e], 3, PART_SPARK, 1, 3, 8, 14)
+          if (world.hitstop < 2) world.hitstop = 2
+        }
         const bounce = world.projBounce[i]
         const px = world.projX[i]
         const py = world.projY[i]
@@ -1069,6 +1242,41 @@ function tickParticles(world: World): void {
   }
 }
 
+function tickJuiceFx(world: World): void {
+  if (world.killStreakTimer > 0) {
+    world.killStreakTimer--
+    if (world.killStreakTimer <= 0) world.killStreak = 0
+  }
+  if (world.shakeLeft > 0) {
+    world.shakeLeft--
+    if (world.shakeLeft <= 0) world.shakeMag = 0
+    else world.shakeMag *= 0.88
+  }
+  if (world.zoomPunch > 0) world.zoomPunch--
+  if (world.flashLeft > 0) world.flashLeft--
+  if (world.calloutLife > 0) {
+    world.calloutLife--
+    if (world.calloutLife <= 0) world.calloutId = 0
+  }
+  if (world.plantFlashLife > 0) world.plantFlashLife--
+  if (world.pruneFlashLife > 0) world.pruneFlashLife--
+  if (world.linkSparkLife > 0) world.linkSparkLife--
+  if (world.exploitPipFlash > 0) world.exploitPipFlash--
+  if (world.deathPopLife > 0) world.deathPopLife--
+  if (world.levelSnap > 0) world.levelSnap++
+  for (let i = 0; i < MAX_FLOATS; i++) {
+    if (!world.floatAlive[i]) continue
+    world.floatY[i] += world.floatVy[i]
+    world.floatVy[i] *= 0.94
+    world.floatLife[i]--
+    if (world.floatLife[i] <= 0) world.floatAlive[i] = 0
+  }
+  for (let i = 0; i < MAX_TRAIL; i++) {
+    if (world.trailLife[i] <= 0) continue
+    world.trailLife[i]--
+  }
+}
+
 function tickSpawns(world: World): void {
   world.spawnTimer--
   if (world.spawnTimer > 0) return
@@ -1101,8 +1309,15 @@ function tickComboTimers(world: World): void {
 function endRun(world: World, survived: boolean, key: number): void {
   world.survived = survived
   world.resultKey = key
-  if (survived) world.events |= SimEvent.Win
-  else world.events |= SimEvent.Die
+  if (survived) {
+    world.events |= SimEvent.Win
+    world.flashLeft = 18
+    world.zoomPunch = 16
+    bumpShake(world, 16, 6)
+  } else {
+    world.events |= SimEvent.Die
+    bumpShake(world, 12, 5)
+  }
   setPhase(world, Phase.Result)
 }
 
@@ -1179,6 +1394,13 @@ export function simTick(world: World, bits: number): void {
   }
 
   if (world.phase === Phase.Result) {
+    if (world.flashLeft > 0) world.flashLeft--
+    if (world.zoomPunch > 0) world.zoomPunch--
+    if (world.shakeLeft > 0) {
+      world.shakeLeft--
+      world.shakeMag *= 0.88
+    }
+    world.tick++
     if (bits & (CmdBit.Restart | CmdBit.Confirm)) {
       const nextSeed = (world.seed + 0x9e3779b9 + world.tick) >>> 0
       resetRun(world, nextSeed || 1)
@@ -1195,6 +1417,12 @@ export function simTick(world: World, bits: number): void {
   }
 
   if (world.phase === Phase.LevelUp) {
+    if (world.levelSnap > 0) world.levelSnap++
+    if (world.flashLeft > 0) world.flashLeft--
+    if (world.shakeLeft > 0) {
+      world.shakeLeft--
+      world.shakeMag *= 0.88
+    }
     let pick = -1
     if (bits & CmdBit.Pick1) pick = 0
     else if (bits & CmdBit.Pick2) pick = 1
@@ -1204,6 +1432,7 @@ export function simTick(world: World, bits: number): void {
       world.playerMaxHp = BASE_HP + world.upgrades.maxHpBonus
       if (world.playerHp > world.playerMaxHp) world.playerHp = world.playerMaxHp
       if (world.levelChoices[pick] === UpgradeId.Hp) world.playerHp = world.playerMaxHp
+      world.levelSnap = 0
       setPhase(world, Phase.Run)
     }
     world.prevBits = bits
@@ -1216,17 +1445,22 @@ export function simTick(world: World, bits: number): void {
     return
   }
 
-  // Hitstop-lite: skip movement ticks briefly but still advance timers lightly
-  if (world.hitstop > 0) {
-    world.hitstop--
-    tickComboTimers(world)
-    world.tick++
-    world.prevBits = bits
-    return
-  }
-
+  // Hitstop-lite: player can still plant/prune/dash; freeze combat briefly
   tickPlayer(world, bits)
   tickComboTimers(world)
+  if (world.hitstop > 0) {
+    world.hitstop--
+    tickParticles(world)
+    tickJuiceFx(world)
+    tickPatches(world)
+    world.tick++
+    world.prevBits = bits
+    if (world.playerHp <= 0) {
+      world.playerHp = 0
+      endRunCleanup(world, false, ResultKey.Wiped)
+    }
+    return
+  }
   tickSpawns(world)
   tickBoss(world)
   // adjacency rebuild every 8 ticks (cheap) + on plant/prune
@@ -1236,6 +1470,7 @@ export function simTick(world: World, bits: number): void {
   tickEnemies(world)
   tickPatches(world)
   tickParticles(world)
+  tickJuiceFx(world)
   world.tick++
   world.prevBits = bits
   if (world.playerHp <= 0) {

@@ -10,4 +10,7 @@ export const SimEvent = {
   Synergy: 1 << 8,
   Overheat: 1 << 9,
   Exploit: 1 << 10,
+  MultiKill: 1 << 11,
+  ExploitStack: 1 << 12,
+  SynergyForm: 1 << 13,
 } as const

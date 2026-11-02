@@ -1,6 +1,24 @@
 import { SimEvent } from '../sim/events'
 
-type SfxKind = 'plant' | 'prune' | 'dash' | 'hit' | 'level' | 'die' | 'ui' | 'story' | 'fire' | 'synergy' | 'overheat' | 'exploit'
+type SfxKind =
+  | 'plant'
+  | 'prune'
+  | 'dash'
+  | 'hit'
+  | 'kill'
+  | 'multi'
+  | 'level'
+  | 'die'
+  | 'ui'
+  | 'win'
+  | 'story'
+  | 'fire'
+  | 'synergy'
+  | 'synergyForm'
+  | 'overheat'
+  | 'exploit'
+  | 'stack'
+  | 'warn'
 
 let ac: AudioContext | null = null
 let master: GainNode | null = null
@@ -19,6 +37,7 @@ let bassGarden: OscillatorNode | null = null
 let bassInvade: OscillatorNode | null = null
 let noiseSrc: AudioBufferSourceNode | null = null
 let noiseGain: GainNode | null = null
+let multiPitch = 0
 
 const GARDEN_LEAD = [
   60, 64, 67, 72, 67, 64, 62, 67, 60, 65, 69, 72, 69, 65, 64, 67, 62, 66, 69, 74, 69, 66, 64, 60, 59, 62, 67,
@@ -45,7 +64,7 @@ function ensure(): AudioContext | null {
     if (!AC) return null
     ac = new AC()
     master = ac.createGain()
-    master.gain.value = 0.11
+    master.gain.value = 0.12
     master.connect(ac.destination)
     gardenBus = ac.createGain()
     invadeBus = ac.createGain()
@@ -160,7 +179,7 @@ function startVoices(): void {
 
 export function setMuted(v: boolean): void {
   muted = v
-  if (master) master.gain.value = v ? 0 : 0.11
+  if (master) master.gain.value = v ? 0 : 0.12
 }
 
 export function startMusic(): void {
@@ -177,99 +196,144 @@ export function setPressure(p: number): void {
   invadeBus.gain.setTargetAtTime(pressure, t, 0.22)
 }
 
+function tone(
+  freq: number,
+  dur: number,
+  type: OscillatorType,
+  peak: number,
+  slide?: number,
+): void {
+  const ctx = ensure()
+  if (!ctx || !master) return
+  const o = ctx.createOscillator()
+  const g = ctx.createGain()
+  o.type = type
+  o.connect(g)
+  g.connect(master)
+  const t = ctx.currentTime
+  o.frequency.setValueAtTime(freq, t)
+  if (slide !== undefined) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t + dur)
+  g.gain.setValueAtTime(peak, t)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+  o.start(t)
+  o.stop(t + dur + 0.01)
+}
+
+function noiseBurst(dur: number, peak: number): void {
+  const ctx = ensure()
+  if (!ctx || !master) return
+  const src = ctx.createBufferSource()
+  src.buffer = makeNoiseBuffer(ctx)
+  const g = ctx.createGain()
+  const f = ctx.createBiquadFilter()
+  f.type = 'bandpass'
+  f.frequency.value = 1200
+  f.Q.value = 0.7
+  src.connect(f)
+  f.connect(g)
+  g.connect(master)
+  const t = ctx.currentTime
+  g.gain.setValueAtTime(peak, t)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+  src.start(t)
+  src.stop(t + dur + 0.02)
+}
+
 export function beep(kind: SfxKind): void {
   const ctx = ensure()
   if (!ctx || !master) return
   startVoices()
-  const o = ctx.createOscillator()
-  const g = ctx.createGain()
-  o.connect(g)
-  g.connect(master)
-  const t = ctx.currentTime
-  let freq = 440
-  let dur = 0.06
-  let type: OscillatorType = 'square'
-  let peak = 0.07
   if (kind === 'plant') {
-    freq = 700
-    dur = 0.055
-    type = 'triangle'
+    tone(180, 0.05, 'triangle', 0.07, 90)
+    tone(720, 0.07, 'square', 0.05, 1100)
   } else if (kind === 'prune') {
-    freq = 240
-    type = 'triangle'
-    dur = 0.08
+    tone(220, 0.06, 'sawtooth', 0.06, 90)
+    noiseBurst(0.05, 0.04)
+    tone(480, 0.04, 'triangle', 0.04)
   } else if (kind === 'dash') {
-    freq = 160
-    type = 'sawtooth'
-    dur = 0.1
+    tone(140, 0.11, 'sawtooth', 0.07, 420)
+    noiseBurst(0.06, 0.03)
   } else if (kind === 'hit') {
-    freq = 1040
-    dur = 0.028
-    peak = 0.05
-  } else if (kind === 'fire') {
-    freq = 880
-    dur = 0.02
-    peak = 0.03
+    tone(980, 0.025, 'square', 0.045)
+  } else if (kind === 'kill') {
+    tone(520, 0.04, 'square', 0.06, 180)
+    tone(880, 0.05, 'triangle', 0.05)
+    noiseBurst(0.04, 0.035)
+  } else if (kind === 'multi') {
+    multiPitch = Math.min(multiPitch + 1, 6)
+    const base = 440 + multiPitch * 70
+    tone(base, 0.08, 'square', 0.07, base * 1.5)
+    tone(base * 1.25, 0.1, 'triangle', 0.05)
+    noiseBurst(0.05, 0.04)
   } else if (kind === 'level') {
-    freq = 523
-    dur = 0.16
+    tone(523, 0.08, 'square', 0.06)
+    tone(659, 0.1, 'square', 0.055)
+    tone(784, 0.14, 'triangle', 0.06)
+    tone(1046, 0.12, 'triangle', 0.04)
   } else if (kind === 'die') {
-    freq = 90
-    type = 'sawtooth'
-    dur = 0.28
+    tone(110, 0.32, 'sawtooth', 0.09, 35)
+    noiseBurst(0.2, 0.05)
+  } else if (kind === 'win') {
+    tone(523, 0.1, 'square', 0.07)
+    tone(659, 0.12, 'square', 0.06)
+    tone(784, 0.14, 'triangle', 0.07)
+    tone(1046, 0.18, 'triangle', 0.06)
+    tone(1318, 0.2, 'square', 0.04)
   } else if (kind === 'story') {
-    freq = 392
-    dur = 0.09
-    type = 'triangle'
+    tone(392, 0.09, 'triangle', 0.05)
+  } else if (kind === 'fire') {
+    tone(880, 0.018, 'square', 0.025)
   } else if (kind === 'synergy') {
-    freq = 620
-    dur = 0.05
-    type = 'triangle'
-    peak = 0.045
+    tone(640, 0.045, 'triangle', 0.04)
+  } else if (kind === 'synergyForm') {
+    tone(520, 0.05, 'triangle', 0.05, 900)
+    tone(780, 0.07, 'square', 0.04)
   } else if (kind === 'overheat') {
-    freq = 140
-    type = 'sawtooth'
-    dur = 0.12
-    peak = 0.06
+    tone(130, 0.12, 'sawtooth', 0.07, 60)
+    tone(90, 0.08, 'square', 0.04)
+    noiseBurst(0.08, 0.04)
+  } else if (kind === 'warn') {
+    tone(300, 0.05, 'square', 0.05, 200)
   } else if (kind === 'exploit') {
-    freq = 440
-    dur = 0.18
-    type = 'square'
-    peak = 0.08
+    tone(220, 0.08, 'sawtooth', 0.08, 110)
+    tone(440, 0.12, 'square', 0.07, 880)
+    tone(660, 0.14, 'triangle', 0.06, 1320)
+    noiseBurst(0.1, 0.055)
+  } else if (kind === 'stack') {
+    tone(500 + multiPitch * 40, 0.04, 'triangle', 0.045, 700)
   } else {
-    freq = 480
-    dur = 0.045
+    tone(480, 0.045, 'square', 0.05)
   }
-  o.type = type
-  o.frequency.setValueAtTime(freq, t)
-  if (kind === 'level') {
-    o.frequency.linearRampToValueAtTime(659, t + dur * 0.45)
-    o.frequency.linearRampToValueAtTime(784, t + dur)
-  }
-  if (kind === 'dash') o.frequency.exponentialRampToValueAtTime(360, t + dur)
-  if (kind === 'die') o.frequency.exponentialRampToValueAtTime(40, t + dur)
-  if (kind === 'plant') o.frequency.linearRampToValueAtTime(880, t + dur)
-  if (kind === 'exploit') {
-    o.frequency.linearRampToValueAtTime(660, t + dur * 0.4)
-    o.frequency.linearRampToValueAtTime(990, t + dur)
-  }
-  g.gain.setValueAtTime(peak, t)
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-  o.start(t)
-  o.stop(t + dur)
 }
 
 export function consumeSimEvents(events: number): void {
   if (events & SimEvent.Plant) beep('plant')
   if (events & SimEvent.Prune) beep('prune')
   if (events & SimEvent.Dash) beep('dash')
-  if (events & SimEvent.Kill) beep('hit')
-  if (events & SimEvent.LevelUp) beep('level')
-  if (events & SimEvent.Die) beep('die')
-  if (events & SimEvent.Win) beep('ui')
+  if (events & SimEvent.Kill) {
+    beep('kill')
+    multiPitch = Math.max(0, multiPitch)
+  }
+  if (events & SimEvent.MultiKill) beep('multi')
+  if (events & SimEvent.LevelUp) {
+    multiPitch = 0
+    beep('level')
+  }
+  if (events & SimEvent.Die) {
+    multiPitch = 0
+    beep('die')
+  }
+  if (events & SimEvent.Win) {
+    multiPitch = 0
+    beep('win')
+  }
   if (events & SimEvent.StoryAdvance) beep('story')
-  if (events & SimEvent.Synergy) beep('synergy')
+  if (events & SimEvent.SynergyForm) beep('synergyForm')
+  else if (events & SimEvent.Synergy) beep('synergy')
   if (events & SimEvent.Overheat) beep('overheat')
-  if (events & SimEvent.Exploit) beep('exploit')
+  if (events & SimEvent.Exploit) {
+    multiPitch = 0
+    beep('exploit')
+  }
+  if (events & SimEvent.ExploitStack) beep('stack')
 }
-

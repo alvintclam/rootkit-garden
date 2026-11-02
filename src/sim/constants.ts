@@ -7,6 +7,8 @@ export const MAX_ENEMIES = 512
 export const MAX_PROJECTILES = 512
 export const MAX_PARTICLES = 384
 export const MAX_PATCHES = 8
+export const MAX_FLOATS = 24
+export const MAX_TRAIL = 6
 export const PLAYER_RADIUS = 12
 export const FLOWER_RADIUS = 14
 export const PLANT_GRID = 28
@@ -65,3 +67,16 @@ export const FF_EMPOWER = 32
 /** Projectile flag bits */
 export const PF_SPIKE = 1
 export const PF_SPIKE_USED = 2
+
+/** Juice / streak (deterministic) */
+export const KILL_STREAK_WINDOW = 78
+export const PART_DEBRIS = 0
+export const PART_BLOOM = 1
+export const PART_VENT = 2
+export const PART_SPARK = 3
+export const PART_DEATH = 4
+export const CALL_NONE = 0
+export const CALL_TRIPLE = 1
+export const CALL_PENTA = 2
+export const CALL_LINK = 3
+export const CALL_EXPLOIT = 4

@@ -97,6 +97,10 @@ export type StringKey =
   | 'hud.exploit'
   | 'hud.heat'
   | 'tip.synergy'
+  | 'call.triple'
+  | 'call.penta'
+  | 'call.link'
+  | 'call.exploit'
 
 const EN: Record<StringKey, string> = {
   title: 'Rootkit Garden',
@@ -195,7 +199,12 @@ const EN: Record<StringKey, string> = {
   'hud.exploit': 'Exploit',
   'hud.heat': 'HEAT',
   'tip.synergy': 'Link flowers · manage heat · chase Exploit',
+  'call.triple': 'TRIPLE!!',
+  'call.penta': 'OVERCLOCK x5!!',
+  'call.link': 'LINKED!',
+  'call.exploit': 'EXPLOIT BURST!!',
 }
+
 
 
 const ZH: Record<StringKey, string> = {
@@ -295,7 +304,12 @@ const ZH: Record<StringKey, string> = {
   'hud.exploit': 'Exploit',
   'hud.heat': '過熱',
   'tip.synergy': '連花 · 管過熱 · 追 Exploit',
+  'call.triple': '三連擊!!',
+  'call.penta': '過熱五連!!',
+  'call.link': '連花成立!',
+  'call.exploit': 'EXPLOIT 爆發!!',
 }
+
 
 
 const TABLES: Record<LocaleId, Record<StringKey, string>> = {

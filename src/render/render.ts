@@ -16,6 +16,17 @@ import {
   FF_COLONY,
   SCAN_RANGE,
   SCAN_HALF_ANGLE,
+  MAX_FLOATS,
+  MAX_TRAIL,
+  PART_BLOOM,
+  PART_DEATH,
+  PART_DEBRIS,
+  PART_SPARK,
+  PART_VENT,
+  CALL_TRIPLE,
+  CALL_PENTA,
+  CALL_LINK,
+  CALL_EXPLOIT,
 } from '../sim/constants'
 import { Phase } from '../sim/state'
 import type { World } from '../sim/world'
@@ -92,8 +103,17 @@ function hud(ctx: CanvasRenderingContext2D, world: World): void {
   ctx.fillStyle = '#9ad5a8'
   ctx.fillText(t('hud.exploit'), 16, 102)
   for (let p = 0; p < EXPLOIT_CAP; p++) {
-    ctx.fillStyle = p < world.exploitStacks ? '#ff6ad5' : 'rgba(255,106,213,0.2)'
-    ctx.fillRect(90 + p * 14, 92, 10, 10)
+    const on = p < world.exploitStacks
+    const pop = on && world.exploitPipFlash > 0 && p === world.exploitStacks - 1
+    const s = pop ? 14 : 10
+    const ox = pop ? -2 : 0
+    const oy = pop ? -2 : 0
+    ctx.fillStyle = on ? (pop ? '#fff0ff' : '#ff6ad5') : 'rgba(255,106,213,0.2)'
+    ctx.fillRect(90 + p * 14 + ox, 92 + oy, s, s)
+    if (on) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+      ctx.strokeRect(90 + p * 14 + ox, 92 + oy, s, s)
+    }
   }
   if (world.tick < 60 * 12) {
     ctx.fillStyle = 'rgba(124,255,178,0.75)'
@@ -305,7 +325,142 @@ function drawScanCones(ctx: CanvasRenderingContext2D, world: World): void {
   }
 }
 
+
+function drawDashTrail(ctx: CanvasRenderingContext2D, world: World): void {
+  for (let i = 0; i < MAX_TRAIL; i++) {
+    if (world.trailLife[i] <= 0) continue
+    const a = world.trailLife[i] / 12
+    ctx.fillStyle = `rgba(124,255,178,${0.15 + a * 0.35})`
+    ctx.beginPath()
+    ctx.arc(world.trailX[i], world.trailY[i], 6 + (1 - a) * 4, 0, Math.PI * 2)
+    ctx.fill()
+    // speed line
+    ctx.strokeStyle = `rgba(200,255,220,${a * 0.5})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(world.trailX[i] - 10, world.trailY[i])
+    ctx.lineTo(world.trailX[i] + 10, world.trailY[i])
+    ctx.stroke()
+  }
+}
+
+function drawActionFlashes(ctx: CanvasRenderingContext2D, world: World): void {
+  if (world.plantFlashLife > 0) {
+    const u = world.plantFlashLife / 16
+    ctx.strokeStyle = `rgba(124,255,178,${u})`
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.arc(world.plantFlashX, world.plantFlashY, 8 + (1 - u) * 28, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.fillStyle = `rgba(124,255,178,${u * 0.25})`
+    ctx.beginPath()
+    ctx.arc(world.plantFlashX, world.plantFlashY, 6 + (1 - u) * 12, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  if (world.pruneFlashLife > 0) {
+    const u = world.pruneFlashLife / 14
+    ctx.strokeStyle = `rgba(255,179,71,${u})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(world.pruneFlashX, world.pruneFlashY, 6 + (1 - u) * 22, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+}
+
+function drawLinkSpark(ctx: CanvasRenderingContext2D, world: World): void {
+  if (world.linkSparkLife <= 0) return
+  const u = 1 - world.linkSparkLife / 22
+  const x = world.linkSparkX0 + (world.linkSparkX1 - world.linkSparkX0) * u
+  const y = world.linkSparkY0 + (world.linkSparkY1 - world.linkSparkY0) * u
+  ctx.strokeStyle = 'rgba(124,255,178,0.7)'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(world.linkSparkX0, world.linkSparkY0)
+  ctx.lineTo(world.linkSparkX1, world.linkSparkY1)
+  ctx.stroke()
+  ctx.fillStyle = '#ffffff'
+  ctx.beginPath()
+  ctx.arc(x, y, 4, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(124,255,178,0.8)'
+  ctx.beginPath()
+  ctx.arc(x, y, 8, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+function drawDeathPop(ctx: CanvasRenderingContext2D, world: World): void {
+  if (world.deathPopLife <= 0) return
+  const u = world.deathPopLife / 14
+  ctx.strokeStyle = `rgba(255,238,102,${u})`
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.arc(world.deathPopX, world.deathPopY, 6 + (1 - u) * 26, 0, Math.PI * 2)
+  ctx.stroke()
+}
+
+function drawFloats(ctx: CanvasRenderingContext2D, world: World): void {
+  ctx.textAlign = 'center'
+  for (let i = 0; i < MAX_FLOATS; i++) {
+    if (!world.floatAlive[i]) continue
+    const big = world.floatBig[i]
+    const a = Math.min(1, world.floatLife[i] / 10)
+    ctx.globalAlpha = a
+    ctx.fillStyle = big ? '#ffee66' : '#c8facc'
+    ctx.font = big ? 'bold 18px ui-monospace, monospace' : 'bold 13px ui-monospace, monospace'
+    ctx.fillText(String(Math.round(world.floatVal[i])), world.floatX[i], world.floatY[i])
+  }
+  ctx.globalAlpha = 1
+  ctx.textAlign = 'left'
+}
+
+function calloutText(world: World): string {
+  if (world.calloutId === CALL_TRIPLE) return t('call.triple')
+  if (world.calloutId === CALL_PENTA) return t('call.penta')
+  if (world.calloutId === CALL_LINK) return t('call.link')
+  if (world.calloutId === CALL_EXPLOIT) return t('call.exploit')
+  return ''
+}
+
+function drawCallout(ctx: CanvasRenderingContext2D, world: World): void {
+  if (world.calloutLife <= 0 || !world.calloutId) return
+  const msg = calloutText(world)
+  if (!msg) return
+  const u = Math.min(1, world.calloutLife / 12)
+  const scale = 1 + (1 - Math.min(1, (55 - world.calloutLife) / 8)) * 0.25
+  ctx.save()
+  ctx.translate(W * 0.5, H * 0.28)
+  ctx.scale(scale, scale)
+  ctx.globalAlpha = u
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'
+  ctx.fillRect(-140, -28, 280, 48)
+  ctx.fillStyle = world.calloutId === CALL_EXPLOIT || world.calloutId === CALL_PENTA ? '#ff6ad5' : '#7CFFB2'
+  ctx.font = 'bold 26px ui-monospace, monospace'
+  ctx.textAlign = 'center'
+  ctx.fillText(msg, 0, 8)
+  ctx.restore()
+  ctx.textAlign = 'left'
+  ctx.globalAlpha = 1
+}
+
 export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0, showFps = false): void {
+  ctx.save()
+  // camera juice: shake + zoom punch (clamped)
+  let sx = 0
+  let sy = 0
+  if (world.shakeLeft > 0 && world.shakeMag > 0) {
+    const m = Math.min(6, world.shakeMag)
+    const seed = world.tick * 1103515245
+    sx = (((seed >>> 16) & 31) / 31 - 0.5) * 2 * m
+    sy = (((seed >>> 8) & 31) / 31 - 0.5) * 2 * m
+  }
+  const z = world.zoomPunch > 0 ? 1 + Math.min(0.06, world.zoomPunch * 0.005) : 1
+  if (z !== 1) {
+    ctx.translate(W * 0.5, H * 0.5)
+    ctx.scale(z, z)
+    ctx.translate(-W * 0.5 + sx, -H * 0.5 + sy)
+  } else {
+    ctx.translate(sx, sy)
+  }
   fillBg(ctx, world)
   drawPatches(ctx, world)
   drawSynergyLinks(ctx, world)
@@ -337,9 +492,15 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
       ctx.fill()
     }
     if ((world.flowerFlags[i] & FF_COLONY) !== 0) {
-      ctx.strokeStyle = 'rgba(255,106,213,0.35)'
+      const pulse = 22 + Math.sin(world.tick * 0.25) * 4
+      ctx.strokeStyle = 'rgba(255,106,213,0.55)'
+      ctx.lineWidth = 2.5
       ctx.beginPath()
-      ctx.arc(world.flowerX[i], world.flowerY[i], 22 + (world.tick % 40) * 0.15, 0, Math.PI * 2)
+      ctx.arc(world.flowerX[i], world.flowerY[i], pulse, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.strokeStyle = 'rgba(255,180,230,0.25)'
+      ctx.beginPath()
+      ctx.arc(world.flowerX[i], world.flowerY[i], pulse + 8, 0, Math.PI * 2)
       ctx.stroke()
     }
     if (world.flowerKind[i] === 3) {
@@ -355,9 +516,20 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
   }
   for (let i = 0; i < MAX_PARTICLES; i++) {
     if (!world.partAlive[i]) continue
-    ctx.fillStyle = '#9bff3a'
-    ctx.fillRect(world.partX[i] - 1, world.partY[i] - 1, 2, 2)
+    const k = world.partKind[i]
+    if (k === PART_BLOOM) ctx.fillStyle = '#7CFFB2'
+    else if (k === PART_VENT) ctx.fillStyle = '#ffb347'
+    else if (k === PART_SPARK) ctx.fillStyle = '#ff6ad5'
+    else if (k === PART_DEATH) ctx.fillStyle = '#ffee66'
+    else ctx.fillStyle = '#9bff3a'
+    const sz = k === PART_DEATH || k === PART_SPARK ? 3 : 2
+    ctx.fillRect(world.partX[i] - sz * 0.5, world.partY[i] - sz * 0.5, sz, sz)
   }
+  drawDashTrail(ctx, world)
+  drawActionFlashes(ctx, world)
+  drawLinkSpark(ctx, world)
+  drawDeathPop(ctx, world)
+  drawFloats(ctx, world)
   drawScanCones(ctx, world)
   for (let i = 0; i < MAX_ENEMIES; i++) {
     if (!world.enemyAlive[i]) continue
@@ -395,17 +567,29 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
   } else if (world.phase === Phase.LevelUp) {
     ctx.fillStyle = 'rgba(4,12,10,0.72)'
     ctx.fillRect(0, 0, W, H)
+    const snap = world.levelSnap > 0 ? Math.min(1, world.levelSnap / 8) : 1
+    const pop = 0.85 + snap * 0.15
     ctx.fillStyle = '#7CFFB2'
     ctx.font = 'bold 24px ui-monospace, monospace'
     ctx.textAlign = 'center'
-    ctx.fillText(t('levelup'), W / 2, 140)
+    ctx.save()
+    ctx.translate(W / 2, 140)
+    ctx.scale(pop, pop)
+    ctx.fillText(t('levelup'), 0, 0)
+    ctx.restore()
     for (let i = 0; i < 3; i++) {
       const id = world.levelChoices[i]
       if (id < 0) continue
       const r = touchBtnRect((8 + i) as 8 | 9 | 10)
+      const cardPop = 0.7 + Math.min(1, Math.max(0, (world.levelSnap - i * 3) / 8)) * 0.3
+      ctx.save()
+      ctx.translate(r.x + r.w * 0.5, r.y + r.h * 0.5)
+      ctx.scale(cardPop, cardPop)
+      ctx.translate(-(r.x + r.w * 0.5), -(r.y + r.h * 0.5))
       ctx.fillStyle = '#102818'
       ctx.fillRect(r.x, r.y, r.w, r.h)
       ctx.strokeStyle = '#3dff9a'
+      ctx.lineWidth = 2 + (1 - cardPop) * 4
       ctx.strokeRect(r.x, r.y, r.w, r.h)
       ctx.fillStyle = '#c8facc'
       ctx.font = 'bold 16px ui-monospace, monospace'
@@ -413,11 +597,16 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
       ctx.font = '13px ui-monospace, monospace'
       ctx.fillStyle = '#9ad5a8'
       wrapText(ctx, upgradeBlurb(id), r.x + r.w * 0.5, r.y + 72, r.w - 24, 18)
+      ctx.restore()
     }
     ctx.textAlign = 'left'
   } else if (world.phase === Phase.Result) {
     const reason =
       world.resultKey === ResultKey.Survived ? t('result.survived') : t('result.wiped')
+    if (world.survived) {
+      ctx.fillStyle = `rgba(124,255,178,${0.08 + 0.06 * Math.sin(world.tick * 0.2)})`
+      ctx.fillRect(0, 0, W, H)
+    }
     overlay(ctx, world.survived ? t('result.win') : t('result.lose'), [
       reason,
       `${t('hud.seed')} ${world.seed}`,
@@ -433,6 +622,15 @@ export function renderFrame(ctx: CanvasRenderingContext2D, world: World, fps = 0
       t('result.restart'),
     ])
   }
+  drawCallout(ctx, world)
+  if (world.flashLeft > 0) {
+    const a = Math.min(0.55, world.flashLeft * 0.06)
+    ctx.fillStyle = world.survived && world.phase === Phase.Result
+      ? `rgba(124,255,178,${a})`
+      : `rgba(255,255,255,${a})`
+    ctx.fillRect(0, 0, W, H)
+  }
+  ctx.restore()
   drawTouchChrome(ctx, world)
 }
 
